@@ -101,7 +101,14 @@ async function initializeAnalysisTable() {
     }
 
     async function updateAnalysisTable() {
+        const loader = document.getElementById('loader');
+        const tableContainer = document.getElementById('tableContainer');
+        
         try {
+            // Mostrar loader, ocultar tabla
+            loader.style.display = 'flex';
+            tableContainer.classList.add('content-hidden');
+            
             const response = await fetch(`/api/analysis/${analysisMonth.value || 'all'}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
@@ -154,6 +161,10 @@ async function initializeAnalysisTable() {
                 order: [[2, 'desc']]
             });
 
+            // Ocultar loader, mostrar tabla
+            loader.style.display = 'none';
+            tableContainer.classList.remove('content-hidden');
+
             // Add event listeners
             $('#analysisTable').on('click', '.ver-detalle', function() {
                 const codigo = $(this).data('codigo');
@@ -168,6 +179,10 @@ async function initializeAnalysisTable() {
 
         } catch (error) {
             console.error('Error:', error);
+            // Ocultar loader en caso de error
+            loader.style.display = 'none';
+            tableContainer.classList.remove('content-hidden');
+            
             Swal.fire({
                 icon: 'error',
                 title: 'Error',

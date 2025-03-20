@@ -73,6 +73,8 @@ body {
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  min-height: 400px;
 }
 .descuadre-negativo {
   color: red;
@@ -207,4 +209,84 @@ body {
 #analysisTable td:last-child {
     width: 100px;
     text-align: center;
+}
+
+/* Loader styles */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 5px solid #00549F;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.content-hidden {
+    opacity: 0;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #6c757d;
+    min-height: 400px;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #00549F;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.empty-state p {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-state.compare {
+    display: flex;
+    min-height: 600px;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.empty-state.compare .content {
+    max-width: 600px;
+    text-align: center;
+    margin: auto;
+}
+
+.empty-state.compare .months-icon {
+    font-size: 2rem;
+    color: #00549F;
+    margin-bottom: 1rem;
+}
+
+.empty-state.compare .months-icon i {
+    margin: 0 0.5rem;
+    opacity: 0.5;
 }

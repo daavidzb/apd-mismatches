@@ -101,19 +101,28 @@
               </select>
             </div>
           </div>
-          <div class="table-responsive">
-            <table class="table table-striped table-hover" id="analysisTable">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Descripción</th>
-                  <th>Último Descuadre</th>
-                  <th>Moda</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+          
+          <!-- Loader -->
+          <div id="loader" class="loader-container">
+            <div class="loader"></div>
+          </div>
+          
+          <!-- Tabla -->
+          <div id="tableContainer" class="table-container content-hidden">
+            <div class="table-responsive">
+              <table class="table table-striped table-hover" id="analysisTable">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Último Descuadre</th>
+                    <th>Moda</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

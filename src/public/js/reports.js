@@ -210,7 +210,16 @@ async function initializeEvolutionChart() {
 
     
     async function updateChart(medicineCode) {
-        if (!medicineCode) return;
+        if (!medicineCode) {
+            document.querySelector('#evolutionChart').innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-search"></i>
+                    <h4>Busca un medicamento para ver su evolución</h4>
+                    <p>Escribe el código o nombre del medicamento en el buscador superior para visualizar el histórico de sus descuadres.</p>
+                </div>
+            `;
+            return;
+        }
 
         try {
             const response = await fetch(`/api/reports/evolution/${medicineCode}`);
@@ -365,6 +374,25 @@ async function initializeCompareChart() {
     let detailChart = null;
 
     async function updateCompareChart() {
+        if (!compareMonth1.value || !compareMonth2.value) {
+            const container = document.querySelector("#compareSummaryChart").parentElement;
+            container.innerHTML = `
+                <div class="empty-state compare">
+                    <div class="content">
+                        <div class="months-icon">
+                            <i class="bi bi-calendar-month"></i>
+                            <i class="bi bi-arrow-left-right"></i>
+                            <i class="bi bi-calendar-month"></i>
+                        </div>
+                        <h4>Selecciona dos meses para comparar</h4>
+                        <p>Utiliza los selectores superiores para elegir los meses que deseas comparar y visualizar sus diferencias en descuadres.</p>
+                    </div>
+                </div>
+            `;
+            document.querySelector("#compareDetailChart").innerHTML = '';
+            return;
+        }
+
         try {
             if (!compareMonth1.value || !compareMonth2.value) return;
 
@@ -472,4 +500,7 @@ async function initializeCompareChart() {
 
     compareMonth1.addEventListener('change', updateCompareChart);
     compareMonth2.addEventListener('change', updateCompareChart);
+    
+    // Llamar a updateCompareChart al inicio para mostrar el estado vacío
+    updateCompareChart();
 }
