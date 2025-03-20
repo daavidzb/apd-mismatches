@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    let tables = {};
+
     const configBase = {
         language: {
             url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
@@ -49,11 +51,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     ];
 
-    let tables = {};
-
     // Función para inicializar tabla
     function initTable(tabId, status) {
         if (tables[tabId]) {
+            // Remover event listeners antiguos
+            $(`#${tabId}`).off('click', '.ver-detalle');
+            $(`#${tabId}`).off('click', '.gestionar');
             tables[tabId].destroy();
         }
 
@@ -61,21 +64,12 @@ document.addEventListener('DOMContentLoaded', function() {
             ...configBase,
             ajax: {
                 url: `/api/managed/${status}`,
-                dataSrc: 'managed',
-                beforeSend: function() {
-                    $(`#${tabId}`).closest('.tab-pane').find('.loader-container').show();
-                },
-                complete: function() {
-                    $(`#${tabId}`).closest('.tab-pane').find('.loader-container').hide();
-                }
+                dataSrc: 'managed'
             },
-            columns: columnasBase,
-            drawCallback: function() {
-                this.api().columns.adjust();
-            }
+            columns: columnasBase
         });
 
-        // Eventos de los botones
+        // Agregar event listeners
         $(`#${tabId}`).on('click', '.ver-detalle', function() {
             const codigo = $(this).data('codigo');
             showMedicineDetails(codigo);
@@ -84,11 +78,11 @@ document.addEventListener('DOMContentLoaded', function() {
         $(`#${tabId}`).on('click', '.gestionar', function() {
             const codigo = $(this).data('codigo');
             const descripcion = $(this).data('descripcion');
-            gestionarDescuadre(codigo, descripcion);
+            gestionarDescuadre(codigo, descripcion, tables);
         });
     }
 
-    // Inicializar todas las tablas al cargar
+    // Inicializar tablas
     const tablesToInit = [
         { id: 'tablaPendientes', status: 1 },
         { id: 'tablaEnProceso', status: 2 },
@@ -102,105 +96,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Manejar cambios de pestaña
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
         const target = $(e.target).attr('data-bs-target').substring(1);
-        let tableId;
-
-        switch(target) {
-            case 'descuadres':
-                tableId = 'tablaPendientes';
-                break;
-            case 'enProceso':
-                tableId = 'tablaEnProceso';
-                break;
-            case 'gestionados':
-                tableId = 'tablaGestionados';
-                break;
-        }
-
+        const tableMap = {
+            'descuadres': 'tablaPendientes',
+            'enProceso': 'tablaEnProceso',
+            'gestionados': 'tablaGestionados'
+        };
+        
+        const tableId = tableMap[target];
         if (tables[tableId]) {
-            tables[tableId].columns.adjust();
-            tables[tableId].ajax.reload(null, false);
-        }
-    });
-
-    // Actualizar tablas cada 5 minutos
-    setInterval(() => {
-        Object.values(tables).forEach(table => {
-            if (table) {
-                table.ajax.reload(null, false);
-            }
-        });
-    }, 300000);
-
-    // Event handler para ver detalles
-    $('.table').on('click', '.ver-detalle', async function() {
-        const codigo = $(this).data('codigo');
-        try {
-            const response = await fetch(`/api/managed/details/${codigo}`);
-            if (!response.ok) throw new Error('Error al obtener detalles');
-            const data = await response.json();
-
-            Swal.fire({
-                title: 'Detalles del Medicamento',
-                html: `
-                    <div class="text-start">
-                        <h6 class="mb-3">
-                            <i class="bi bi-capsule me-2"></i>${data.descripcion}
-                            <br>
-                            <small class="text-muted">
-                                <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
-                            </small>
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Estado:</th>
-                                    <td>${data.estado || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <th>Categoría:</th>
-                                    <td>${data.categoria || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <th>Motivo:</th>
-                                    <td>${data.motivo || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <th>Observaciones:</th>
-                                    <td>${data.observaciones || 'Sin observaciones'}</td>
-                                </tr>
-                                <tr>
-                                    <th>Fecha Gestión:</th>
-                                    <td>${new Date(data.fecha_gestion).toLocaleString('es-ES')}</td>
-                                </tr>
-                                <tr>
-                                    <th>Gestionado por:</th>
-                                    <td>${data.gestionado_por || 'N/A'}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                `,
-                width: '600px',
-                confirmButtonColor: '#00549F'
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error al cargar los detalles',
-                confirmButtonColor: '#00549F'
-            });
+            tables[tableId].ajax.reload();
         }
     });
 });
 
 // Función para gestionar descuadre
-async function gestionarDescuadre(codigo, descripcion) {
+async function gestionarDescuadre(codigo, descripcion, tables) {
     try {
-        const response = await fetch(`/api/managed/details/${codigo}`);
+        // Primero obtener los detalles actuales del medicamento
+        const detailsResponse = await fetch(`/api/managed/details/${codigo}`);
+        if (!detailsResponse.ok) throw new Error('Error al obtener detalles del medicamento');
+        const currentDetails = await detailsResponse.json();
+
+        // Luego obtener las listas de estados, categorías y motivos
+        const response = await fetch(`/api/analysis/manage/${codigo}`);
         if (!response.ok) throw new Error('Error al obtener datos del medicamento');
-        
         const data = await response.json();
         
         const result = await Swal.fire({
@@ -218,7 +137,8 @@ async function gestionarDescuadre(codigo, descripcion) {
                         <label class="form-label">Estado</label>
                         <select class="form-select" id="estado">
                             ${data.estados.map(estado => `
-                                <option value="${estado.id_estado}">
+                                <option value="${estado.id_estado}" 
+                                    ${currentDetails.id_estado === estado.id_estado ? 'selected' : ''}>
                                     ${estado.nombre}
                                 </option>
                             `).join('')}
@@ -229,15 +149,28 @@ async function gestionarDescuadre(codigo, descripcion) {
                         <select class="form-select" id="categoria">
                             <option value="">Seleccionar categoría...</option>
                             ${data.categorias.map(cat => `
-                                <option value="${cat.id_categoria}">
+                                <option value="${cat.id_categoria}"
+                                    ${currentDetails.id_categoria === cat.id_categoria ? 'selected' : ''}>
                                     ${cat.nombre}
                                 </option>
                             `).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Motivo</label>
+                        <select class="form-select" id="motivo">
+                            <option value="">Seleccionar motivo...</option>
+                            ${data.motivos.map(mot => `
+                                <option value="${mot.id_motivo}"
+                                    ${currentDetails.id_motivo === mot.id_motivo ? 'selected' : ''}>
+                                    ${mot.nombre}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                        <textarea class="form-control" id="observaciones" rows="3">${currentDetails.observaciones || ''}</textarea>
                     </div>
                 </div>
             `,
@@ -249,36 +182,37 @@ async function gestionarDescuadre(codigo, descripcion) {
         });
 
         if (result.isConfirmed) {
-            const formData = {
+            const gestionData = {
                 id_estado: document.getElementById('estado').value,
                 id_categoria: document.getElementById('categoria').value,
+                id_motivo: document.getElementById('motivo').value,
                 observaciones: document.getElementById('observaciones').value
             };
 
-            const saveResponse = await fetch(`/api/managed/update/${codigo}`, {
+            const updateResponse = await fetch(`/api/analysis/update/${codigo}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(gestionData)
             });
 
-            if (saveResponse.ok) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Guardado',
-                    text: 'El descuadre ha sido gestionado correctamente',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+            if (!updateResponse.ok) throw new Error('Error al actualizar');
 
-                // Recargar todas las tablas
-                Object.values(tables).forEach(table => {
-                    if (table) {
-                        table.ajax.reload();
-                    }
-                });
-            }
+            await Swal.fire({
+                icon: 'success',
+                title: 'Guardado',
+                text: 'El descuadre ha sido gestionado correctamente',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            // Recargar todas las tablas
+            Object.values(tables).forEach(table => {
+                if (table) {
+                    table.ajax.reload();
+                }
+            });
         }
     } catch (error) {
         console.error('Error:', error);
@@ -291,13 +225,15 @@ async function gestionarDescuadre(codigo, descripcion) {
     }
 }
 
+// Función para mostrar detalles
 async function showMedicineDetails(codigo) {
     try {
         const response = await fetch(`/api/managed/details/${codigo}`);
         if (!response.ok) throw new Error('Error al obtener detalles');
-        
         const data = await response.json();
-        
+
+        if (!data) throw new Error('No se encontraron detalles');
+
         Swal.fire({
             title: 'Detalles del Medicamento',
             html: `
@@ -313,8 +249,12 @@ async function showMedicineDetails(codigo) {
                         <table class="table table-sm">
                             <tbody>
                                 <tr>
-                                    <th>Estado:</th>
-                                    <td><span class="badge" style="background-color: ${data.estado_color}">${data.estado || 'N/A'}</span></td>
+                                    <th>Estado actual:</th>
+                                    <td>
+                                        <span class="badge" style="background-color: ${data.estado_color}">
+                                            ${data.estado || 'N/A'}
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th>Categoría:</th>
@@ -329,12 +269,18 @@ async function showMedicineDetails(codigo) {
                                     <td>${data.observaciones || 'Sin observaciones'}</td>
                                 </tr>
                                 <tr>
-                                    <th>Gestionado por:</th>
-                                    <td>${data.usuario || 'N/A'}</td>
+                                    <th>Último descuadre:</th>
+                                    <td class="${data.descuadre < 0 ? 'text-danger' : 'text-success'}">
+                                        <strong>${data.descuadre}</strong>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <th>Fecha gestión:</th>
+                                    <th>Fecha última gestión:</th>
                                     <td>${new Date(data.fecha_gestion).toLocaleString('es-ES')}</td>
+                                </tr>
+                                <tr>
+                                    <th>Gestionado por:</th>
+                                    <td>${data.usuario || 'N/A'}</td>
                                 </tr>
                             </tbody>
                         </table>

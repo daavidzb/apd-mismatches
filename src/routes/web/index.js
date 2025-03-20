@@ -23,5 +23,6 @@ router.get('/api/analysis/detail/:month/:code', controller.get_analysis_detail);
 router.get('/api/analysis/manage/:code', controller.get_medicine_management);
 router.post('/api/analysis/manage/:code', controller.update_medicine_management);
 router.post('/api/analysis/update/:code', controller.update_medicine_status);
+router.get('/api/managed/details/:codigo', controller.get_managed_details);
 
 module.exports.router = router

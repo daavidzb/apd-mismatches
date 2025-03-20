@@ -823,7 +823,7 @@ const get_managed_details = async (req, res) => {
     try {
         const { codigo } = req.params;
         const query = `
-            SELECT 
+            SELECT DISTINCT
                 d.codigo_med,
                 d.descripcion,
                 d.descuadre,
@@ -833,7 +833,10 @@ const get_managed_details = async (req, res) => {
                 ed.color as estado_color,
                 cd.nombre as categoria,
                 md.nombre as motivo,
-                mg.observaciones
+                mg.observaciones,
+                mg.id_estado,
+                mg.id_categoria,
+                mg.id_motivo
             FROM medicamentos_gestionados mg
             JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
             JOIN usuarios u ON mg.id_usuario = u.id_usuario
@@ -849,7 +852,10 @@ const get_managed_details = async (req, res) => {
                 console.error("Database error:", error);
                 return res.status(500).json({ error: error.message });
             }
-            res.json(results[0] || {});
+            if (!results.length) {
+                return res.status(404).json({ error: 'No se encontraron detalles para este medicamento' });
+            }
+            res.json(results[0]);
         });
     } catch (error) {
         console.error("Error:", error);
