@@ -15,7 +15,7 @@ $(document).ready(function() {
             }
         ],
         order: [[0, 'desc'], [1, 'asc']],
-        pageLength: 50,
+        pageLength: 20,
         responsive: true
     });
 });

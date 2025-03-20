@@ -1,5 +1,8 @@
 body {
   background-color: #f4f6f9;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 .navbar {
   background-color: #00549f;
@@ -26,6 +29,7 @@ body {
 
 .navbar-nav {
   margin-left: auto;
+  align-items: center;
 }
 
 .nav-link {
@@ -96,6 +100,7 @@ body {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 .btn-primary {
   background-color: #00549f;
@@ -289,4 +294,56 @@ body {
 .empty-state.compare .months-icon i {
     margin: 0 0.5rem;
     opacity: 0.5;
+}
+
+.user-dropdown {
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.9) !important;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-dropdown:hover,
+.user-dropdown:focus {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.user-avatar {
+    background-color: rgba(255, 255, 255, 0.2);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.dropdown-menu {
+    margin-top: 0.5rem !important;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item i {
+    margin-right: 0.5rem;
+}
+
+/* Footer styles */
+.footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Ajustar márgenes para el contenido principal */
+.main-content {
+    margin-bottom: 2rem;
 }

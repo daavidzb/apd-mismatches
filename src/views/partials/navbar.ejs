@@ -1,0 +1,72 @@
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+      <div class="navbar-brand-container">
+        <a class="navbar-brand" href="/upload">
+          <img src="/public/img/logo.png" alt="APD Logo" class="navbar-logo" />
+        </a>
+      </div>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
+              <i class="bi bi-cloud-upload me-1"></i> Subir
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
+              <i class="bi bi-table me-1"></i> Histórico
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
+              <i class="bi bi-graph-up-arrow me-1"></i> Reportes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
+              <i class="bi bi-clipboard2-data me-1"></i> Análisis
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
+              <i class="bi bi-check2-circle me-1"></i> Gestionados
+            </a>
+          </li>
+        </ul>
+        
+        <% if (user) { %>
+          <div class="nav-item dropdown">
+            <a class="user-dropdown dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="user-avatar">
+                <i class="bi bi-person"></i>
+              </div>
+              <%= user.nombre %>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <span class="dropdown-item-text text-muted small">
+                  <i class="bi bi-person-badge"></i>
+                  <%= user.username %>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="/auth/logout">
+                  <i class="bi bi-box-arrow-right"></i>
+                  Cerrar sesión
+                </a>
+              </li>
+            </ul>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </nav>

@@ -4,5 +4,5 @@ module.exports = {
 		origin: `http://localhost:${this.port}`,
 		optionSuccessStatus: 200,
 	},
-    secret: 'marinero-secret',
+    secret: 'apd-secret',
 }

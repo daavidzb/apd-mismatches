@@ -26,7 +26,6 @@ function getLastTwelveMonths() {
 
 function populateMonthSelector(months) {
     const analysisMonth = document.querySelector('#analysisMonth');
-    // Add "All" option first
     const allOption = new Option('Todos los descuadres', 'all');
     analysisMonth.add(allOption);
     
@@ -35,13 +34,13 @@ function populateMonthSelector(months) {
         analysisMonth.add(option);
     });
 
-    // Set "All" as default
     analysisMonth.value = 'all';
 }
 
 async function initializeAnalysisTable() {
     const analysisMonth = document.querySelector('#analysisMonth');
     let dataTable = null;
+    let currentRequest = null;
 
     async function showMedicineDetails(codigo, month) {
         try {
@@ -105,11 +104,23 @@ async function initializeAnalysisTable() {
         const tableContainer = document.getElementById('tableContainer');
         
         try {
+            // Cancelar petición anterior si existe
+            if (currentRequest) {
+                currentRequest.abort();
+            }
+
             // Mostrar loader, ocultar tabla
             loader.style.display = 'flex';
             tableContainer.classList.add('content-hidden');
             
-            const response = await fetch(`/api/analysis/${analysisMonth.value || 'all'}`);
+            // Crear nueva petición con AbortController
+            const controller = new AbortController();
+            currentRequest = controller;
+            
+            const response = await fetch(`/api/analysis/${analysisMonth.value || 'all'}`, {
+                signal: controller.signal
+            });
+
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
@@ -118,8 +129,11 @@ async function initializeAnalysisTable() {
                 dataTable.destroy();
             }
 
+            // Crear nueva tabla
             dataTable = new DataTable('#analysisTable', {
                 data: data.analysis,
+                processing: true,
+                serverSide: false,
                 columns: [
                     { data: 'codigo_med', title: 'Código' },
                     { data: 'descripcion', title: 'Descripción' },
@@ -156,16 +170,18 @@ async function initializeAnalysisTable() {
                     }
                 ],
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                    processing: '<div class="loader"></div>'
                 },
-                order: [[2, 'desc']]
+                order: [[2, 'desc']],
+                pageLength: 20 
             });
 
-            // Ocultar loader, mostrar tabla
+            currentRequest = null;
+            
             loader.style.display = 'none';
             tableContainer.classList.remove('content-hidden');
 
-            // Add event listeners
             $('#analysisTable').on('click', '.ver-detalle', function() {
                 const codigo = $(this).data('codigo');
                 showMedicineDetails(codigo, analysisMonth.value || 'all');
@@ -178,8 +194,13 @@ async function initializeAnalysisTable() {
             });
 
         } catch (error) {
+            // Ignorar errores de abort
+            if (error.name === 'AbortError') {
+                console.log('Fetch abortado');
+                return;
+            }
+
             console.error('Error:', error);
-            // Ocultar loader en caso de error
             loader.style.display = 'none';
             tableContainer.classList.remove('content-hidden');
             

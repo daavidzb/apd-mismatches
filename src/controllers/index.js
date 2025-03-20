@@ -473,62 +473,46 @@ const get_analysis = async (req, res) => {
 
     if (month && month !== "all") {
       const [year, m] = month.split("-");
-      whereClause =
-        "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
-      params = [year, m, year, m, year, m];
+      whereClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
+      params = [year, m];
     }
 
+    // Optimizar la consulta usando índices y limitando resultados
     const query = `
-        WITH DailyChanges AS (
-            SELECT 
+        WITH RECURSIVE DailyChanges AS (
+            SELECT DISTINCT
                 d.codigo_med,
                 d.descripcion,
                 d.descuadre,
-                DATE(r.fecha_reporte) as fecha,
-                LAG(d.descuadre) OVER (
-                    PARTITION BY d.codigo_med 
-                    ORDER BY DATE(r.fecha_reporte)
-                ) as prev_descuadre
+                DATE(r.fecha_reporte) as fecha
             FROM descuadres d
+            FORCE INDEX (idx_codigo_med)
             JOIN reportes r ON d.id_reporte = r.id_reporte
             ${whereClause}
         ),
-        ChangeDates AS (
-            SELECT 
-                codigo_med,
-                GROUP_CONCAT(
-                    DISTINCT DATE_FORMAT(fecha, '%Y-%m-%d') 
-                    ORDER BY fecha
-                ) as fechas_cambio
-            FROM DailyChanges
-            WHERE descuadre != COALESCE(prev_descuadre, descuadre)
-            GROUP BY codigo_med
-        ),
         LastDescuadre AS (
             SELECT 
-                d.codigo_med,
-                d.descuadre as ultimo_descuadre
-            FROM descuadres d
-            JOIN reportes r ON d.id_reporte = r.id_reporte
-            WHERE (d.codigo_med, r.fecha_reporte) IN (
-                SELECT codigo_med, MAX(fecha_reporte)
-                FROM reportes r2
-                JOIN descuadres d2 ON r2.id_reporte = d2.id_reporte
-                GROUP BY codigo_med
-            )
+                codigo_med,
+                descuadre as ultimo_descuadre
+            FROM (
+                SELECT 
+                    codigo_med,
+                    descuadre,
+                    fecha,
+                    ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY fecha DESC) as rn
+                FROM DailyChanges
+            ) ranked
+            WHERE rn = 1
         ),
         ModaCalculation AS (
             SELECT 
                 d.codigo_med,
                 d.descuadre as moda
-            FROM descuadres d
-            JOIN reportes r ON d.id_reporte = r.id_reporte
-            ${whereClause}
+            FROM DailyChanges d
             GROUP BY d.codigo_med, d.descuadre
             HAVING COUNT(*) >= ALL (
                 SELECT COUNT(*)
-                FROM descuadres d2
-                JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
+                FROM DailyChanges d2
                 WHERE d2.codigo_med = d.codigo_med
                 GROUP BY d2.descuadre
             )
@@ -541,22 +525,17 @@ const get_analysis = async (req, res) => {
         FROM DailyChanges dc
         LEFT JOIN LastDescuadre ld ON dc.codigo_med = ld.codigo_med
         LEFT JOIN ModaCalculation mc ON dc.codigo_med = mc.codigo_med
-        LEFT JOIN ChangeDates cd ON dc.codigo_med = cd.codigo_med
-        WHERE cd.fechas_cambio IS NOT NULL
-        GROUP BY dc.codigo_med
-        ORDER BY ld.ultimo_descuadre DESC`;
+        ORDER BY ld.ultimo_descuadre DESC
+        LIMIT 1000`;
 
-    const results = await new Promise((resolve, reject) => {
-      connection.query(query, params, (error, results) => {
-        if (error) {
-          console.error("Database error:", error);
-          reject(error);
-        }
-        resolve(results);
-      });
+    connection.query(query, params, (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json({ analysis: results });
     });
 
-    res.json({ analysis: results });
   } catch (error) {
     console.error("Error in get_analysis:", error);
     res.status(500).json({ error: error.message });
@@ -631,30 +610,26 @@ const update_medicine_status = async (req, res) => {
   try {
     const { code } = req.params;
     const { id_categoria, id_motivo, id_estado, observaciones } = req.body;
+    
+    if (!req.user) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
 
-    await new Promise((resolve, reject) => {
-      connection.query(
-        `
-        UPDATE descuadres
-        SET 
-            id_categoria = ?,
-            id_motivo = ?,
-            id_estado = ?,
-            observaciones = ?,
-            fecha_actualizacion = CURRENT_TIMESTAMP
-        WHERE codigo_med = ?
-        `,
-        [id_categoria, id_motivo, id_estado, observaciones, code],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
-        }
-      );
-    });
+    await connection.query(
+        `UPDATE descuadres 
+         SET id_categoria = ?,
+             id_motivo = ?,
+             id_estado = ?,
+             observaciones = ?,
+             fecha_actualizacion = CURRENT_TIMESTAMP,
+             id_usuario_gestion = ?
+         WHERE codigo_med = ?`,
+        [id_categoria, id_motivo, id_estado, observaciones, req.user.id_usuario, code]
+    );
 
     res.json({ success: true });
   } catch (error) {
-    console.error("Error in update_medicine_status:", error);
+    console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

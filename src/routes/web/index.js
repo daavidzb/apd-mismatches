@@ -1,12 +1,13 @@
 const router = require('express').Router();
 const controller = require('../../controllers/index.js')
+const { isAuthenticated } = require('../../auth/middleware');
 
-router.get('/', controller.mismatches_view)  
+router.get('/', isAuthenticated, controller.mismatches_view)  
 router.get('/mismatches', controller.mismatches_view)  
-router.get('/upload', controller.upload_view)  
-router.get('/reports', controller.reports_view)
-router.get('/analysis', controller.analysis_view);
-router.get('/managed', controller.managed_view);
+router.get('/upload', isAuthenticated, controller.upload_view)  
+router.get('/reports', isAuthenticated, controller.reports_view)
+router.get('/analysis', isAuthenticated, controller.analysis_view);
+router.get('/managed', isAuthenticated, controller.managed_view);
 router.post('/upload-files', controller.upload_excel)
 
 // Apis
