@@ -1,168 +1,81 @@
 document.addEventListener('DOMContentLoaded', function() {
     const months = getLastTwelveMonths();
-    populateMonthSelector(months);
-    initializeAnalysisTable();
-});
+    const analysisMonth = document.getElementById('analysisMonth');
+    let dataTable = null;
 
-function getLastTwelveMonths() {
-    const months = [];
-    const date = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        months.unshift({
-            value: `${year}-${month.toString().padStart(2, '0')}`,
-            label: new Date(year, month - 1).toLocaleDateString('es-ES', { 
-                year: 'numeric', 
-                month: 'long' 
-            })
-        });
-        date.setMonth(date.getMonth() - 1);
-    }
-    
-    return months;
-}
-
-function populateMonthSelector(months) {
-    const analysisMonth = document.querySelector('#analysisMonth');
-    const allOption = new Option('Todos los descuadres', 'all');
-    analysisMonth.add(allOption);
-    
+    // Poblar selector de meses
     months.forEach(month => {
-        const option = new Option(month.label, month.value);
-        analysisMonth.add(option);
+        const option = document.createElement('option');
+        option.value = month.value;
+        option.textContent = month.label;
+        analysisMonth.appendChild(option);
     });
 
-    analysisMonth.value = 'all';
-}
+    // Inicializar tabla
+    initializeTable(analysisMonth.value);
 
-async function initializeAnalysisTable() {
-    const analysisMonth = document.querySelector('#analysisMonth');
-    let dataTable = null;
-    let currentRequest = null;
+    // Evento cambio de mes
+    analysisMonth.addEventListener('change', function() {
+        initializeTable(this.value);
+    });
 
-    async function showMedicineDetails(codigo, month) {
-        try {
-            const response = await fetch(`/api/analysis/detail/${month}/${codigo}`);
-            if (!response.ok) throw new Error('Error al obtener los detalles');
-            
-            const data = await response.json();
-            
-            Swal.fire({
-                title: `<i class="bi bi-capsule me-2"></i>${data.medicina.descripcion}`,
-                html: `
-                    <div class="mb-3">
-                        <div class="text-muted mb-2">
-                            <i class="bi bi-upc-scan me-2"></i>
-                            <strong>Código:</strong> ${codigo}
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Descuadre</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.details.map(detail => `
-                                    <tr class="${detail.cambio_tendencia ? 'table-warning' : ''}">
-                                        <td>
-                                            <i class="bi bi-calendar3 me-1"></i>
-                                            ${new Date(detail.fecha).toLocaleDateString('es-ES')}
-                                            ${detail.cambio_tendencia ? 
-                                                '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Cambio de tendencia"></i>' : 
-                                                ''}
-                                        </td>
-                                        <td class="${detail.descuadre < 0 ? 'text-danger' : 'text-success'}">
-                                            <strong>${detail.descuadre}</strong>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `,
-                width: '600px',
-                confirmButtonColor: '#00549F'
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error al cargar los detalles del medicamento',
-                confirmButtonColor: '#00549F'
-            });
+    async function initializeTable(month) {
+        if (dataTable) {
+            dataTable.destroy();
         }
-    }
 
-    async function updateAnalysisTable() {
-        const loader = document.getElementById('loader');
-        const tableContainer = document.getElementById('tableContainer');
-        
         try {
-            // Cancelar petición anterior si existe
-            if (currentRequest) {
-                currentRequest.abort();
-            }
-
-            // Mostrar loader, ocultar tabla
-            loader.style.display = 'flex';
-            tableContainer.classList.add('content-hidden');
-            
-            // Crear nueva petición con AbortController
-            const controller = new AbortController();
-            currentRequest = controller;
-            
-            const response = await fetch(`/api/analysis/${analysisMonth.value || 'all'}`, {
-                signal: controller.signal
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+            const response = await fetch(`/api/analysis/${month}`);
+            if (!response.ok) throw new Error('Error al obtener datos');
             const data = await response.json();
 
-            if (dataTable) {
-                dataTable.destroy();
-            }
-
-            // Crear nueva tabla
             dataTable = new DataTable('#analysisTable', {
                 data: data.analysis,
-                processing: true,
-                serverSide: false,
                 columns: [
                     { data: 'codigo_med', title: 'Código' },
-                    { data: 'descripcion', title: 'Descripción' },
+                    { 
+                        data: null, 
+                        title: 'Descripción',
+                        render: function(data) {
+                            const hasChanges = data.tiene_cambios_tendencia ? 
+                                '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : 
+                                '';
+                            return `<div class="d-flex align-items-center justify-content-between">
+                                ${data.descripcion}
+                                ${hasChanges}
+                            </div>`;
+                        }
+                    },
                     { 
                         data: 'ultimo_descuadre',
                         title: 'Último Descuadre',
                         render: function(data) {
-                            const colorClass = data < 0 ? 'text-danger' : 'text-success';
-                            return `<span class="${colorClass}">${data}</span>`;
+                            return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data}</span>`;
                         }
                     },
                     { 
                         data: 'moda',
                         title: 'Moda',
                         render: function(data) {
-                            const colorClass = data < 0 ? 'text-danger' : 'text-success';
-                            return `<span class="${colorClass}">${data}</span>`;
+                            return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data}</span>`;
                         }
                     },
                     {
                         data: null,
                         title: 'Acciones',
+                        className: 'text-center',
                         render: function(data) {
                             return `
-                                <div class="d-flex gap-2 justify-content-center">
-                                    <button class="btn btn-primary btn-sm ver-detalle" data-codigo="${data.codigo_med}">
+                                <div class="btn-group">
+                                    <button class="btn btn-primary btn-sm ver-detalle" 
+                                            data-codigo="${data.codigo_med}"
+                                            title="Ver histórico y tendencias">
                                         <i class="bi bi-graph-up"></i> Ver Detalle
                                     </button>
-                                    <button class="btn btn-success btn-sm gestionar" data-codigo="${data.codigo_med}" data-descripcion="${data.descripcion}">
+                                    <button class="btn btn-success btn-sm ms-2 gestionar" 
+                                            data-codigo="${data.codigo_med}" 
+                                            data-descripcion="${data.descripcion}"
+                                            title="Gestionar descuadre">
                                         <i class="bi bi-pencil-square"></i> Gestionar
                                     </button>
                                 </div>`;
@@ -170,21 +83,16 @@ async function initializeAnalysisTable() {
                     }
                 ],
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-                    processing: '<div class="loader"></div>'
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
                 },
-                order: [[2, 'desc']],
-                pageLength: 20 
+                responsive: true,
+                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
             });
 
-            currentRequest = null;
-            
-            loader.style.display = 'none';
-            tableContainer.classList.remove('content-hidden');
-
+            // Eventos de los botones
             $('#analysisTable').on('click', '.ver-detalle', function() {
                 const codigo = $(this).data('codigo');
-                showMedicineDetails(codigo, analysisMonth.value || 'all');
+                showMedicineDetails(codigo, month);
             });
 
             $('#analysisTable').on('click', '.gestionar', function() {
@@ -194,27 +102,84 @@ async function initializeAnalysisTable() {
             });
 
         } catch (error) {
-            // Ignorar errores de abort
-            if (error.name === 'AbortError') {
-                console.log('Fetch abortado');
-                return;
-            }
-
             console.error('Error:', error);
-            loader.style.display = 'none';
-            tableContainer.classList.remove('content-hidden');
-            
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Error al cargar el análisis: ' + error.message,
+                text: 'Error al cargar los datos',
                 confirmButtonColor: '#00549F'
             });
         }
     }
+});
 
-    analysisMonth.addEventListener('change', updateAnalysisTable);
-    updateAnalysisTable();
+function getLastTwelveMonths() {
+    const months = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const month = date.toLocaleString('es', { month: 'long' });
+        const year = date.getFullYear();
+        
+        months.push({
+            value: `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            label: `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`
+        });
+    }
+    
+    return months;
+}
+
+// Función para mostrar detalles
+async function showMedicineDetails(codigo, month) {
+    try {
+        const response = await fetch(`/api/analysis/detail/${month}/${codigo}`);
+        if (!response.ok) throw new Error('Error al obtener detalles');
+        
+        const data = await response.json();
+        
+        Swal.fire({
+            title: `<i class="bi bi-capsule me-2"></i>${data.medicina.descripcion}`,
+            html: `
+                <div class="text-start">
+                    <div class="text-muted mb-2">
+                        <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descuadre</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.details.map(detail => `
+                                    <tr class="${detail.cambio_tendencia ? 'table-warning' : ''}">
+                                        <td>${new Date(detail.fecha).toLocaleDateString('es-ES')}</td>
+                                        <td class="${detail.descuadre < 0 ? 'text-danger' : 'text-success'}">
+                                            <strong>${detail.descuadre}</strong>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            width: '600px',
+            confirmButtonColor: '#00549F'
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al cargar los detalles',
+            confirmButtonColor: '#00549F'
+        });
+    }
 }
 
 // Función para gestionar medicamento
@@ -225,7 +190,7 @@ async function gestionarMedicamento(codigo, descripcion) {
         
         const data = await response.json();
         
-        Swal.fire({
+        const result = await Swal.fire({
             title: 'Gestionar Medicamento',
             html: `
                 <div class="text-start">
@@ -240,7 +205,7 @@ async function gestionarMedicamento(codigo, descripcion) {
                         <label class="form-label">Estado</label>
                         <select class="form-select" id="estado">
                             ${data.estados.map(estado => `
-                                <option value="${estado.id_estado}" ${data.medicamento.id_estado == estado.id_estado ? 'selected' : ''}>
+                                <option value="${estado.id_estado}">
                                     ${estado.nombre}
                                 </option>
                             `).join('')}
@@ -251,7 +216,7 @@ async function gestionarMedicamento(codigo, descripcion) {
                         <select class="form-select" id="categoria">
                             <option value="">Seleccionar categoría...</option>
                             ${data.categorias.map(cat => `
-                                <option value="${cat.id_categoria}" ${data.medicamento.id_categoria == cat.id_categoria ? 'selected' : ''}>
+                                <option value="${cat.id_categoria}">
                                     ${cat.nombre}
                                 </option>
                             `).join('')}
@@ -259,10 +224,10 @@ async function gestionarMedicamento(codigo, descripcion) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Motivo</label>
-                        <select class="form-select" id="motivo" ${!data.medicamento.id_categoria ? 'disabled' : ''}>
+                        <select class="form-select" id="motivo">
                             <option value="">Seleccionar motivo...</option>
-                            ${data.motivos.filter(m => m.id_categoria == data.medicamento.id_categoria).map(mot => `
-                                <option value="${mot.id_motivo}" ${data.medicamento.id_motivo == mot.id_motivo ? 'selected' : ''}>
+                            ${data.motivos.map(mot => `
+                                <option value="${mot.id_motivo}">
                                     ${mot.nombre}
                                 </option>
                             `).join('')}
@@ -270,48 +235,33 @@ async function gestionarMedicamento(codigo, descripcion) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" rows="3">${data.medicamento.observaciones || ''}</textarea>
+                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
                     </div>
                 </div>
             `,
             confirmButtonText: 'Guardar',
-            cancelButtonText: 'Cancelar',
             showCancelButton: true,
-            width: '600px',
+            cancelButtonText: 'Cancelar',
             confirmButtonColor: '#00549F',
-            preConfirm: () => {
-                return {
-                    id_estado: document.getElementById('estado').value,
-                    id_categoria: document.getElementById('categoria').value,
-                    id_motivo: document.getElementById('motivo').value,
-                    observaciones: document.getElementById('observaciones').value
-                };
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                actualizarGestionMedicamento(codigo, result.value);
-            }
+            width: '600px'
         });
 
-        // Event listener para actualizar motivos cuando cambia la categoría
-        document.getElementById('categoria').addEventListener('change', function(e) {
-            const motivoSelect = document.getElementById('motivo');
-            const motivos = data.motivos.filter(m => m.id_categoria == e.target.value);
-            
-            motivoSelect.innerHTML = '<option value="">Seleccionar motivo...</option>';
-            motivoSelect.disabled = !e.target.value;
-            
-            motivos.forEach(mot => {
-                motivoSelect.add(new Option(mot.nombre, mot.id_motivo));
-            });
-        });
+        if (result.isConfirmed) {
+            const gestionData = {
+                id_estado: document.getElementById('estado').value,
+                id_categoria: document.getElementById('categoria').value,
+                id_motivo: document.getElementById('motivo').value,
+                observaciones: document.getElementById('observaciones').value
+            };
 
+            await actualizarGestionMedicamento(codigo, gestionData);
+        }
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al cargar los datos del medicamento',
+            text: 'Error al gestionar el medicamento',
             confirmButtonColor: '#00549F'
         });
     }
@@ -322,38 +272,28 @@ async function actualizarGestionMedicamento(codigo, datos) {
         const response = await fetch(`/api/analysis/update/${codigo}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                id_categoria: datos.id_categoria || null,
-                id_motivo: datos.id_motivo || null,
-                id_estado: datos.id_estado || null,
-                observaciones: datos.observaciones || ''
-            })
+            body: JSON.stringify(datos)
         });
 
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error || 'Error al actualizar');
+        if (!response.ok) throw new Error('Error al actualizar');
 
-        // Mostrar mensaje de éxito y redirigir
         await Swal.fire({
             icon: 'success',
             title: 'Actualizado',
             text: 'Los cambios se han guardado correctamente',
-            confirmButtonColor: '#00549F',
             timer: 1500,
             showConfirmButton: false
         });
 
-        // Redirigir a la vista de gestionados
         window.location.href = '/managed';
-
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al guardar los cambios: ' + error.message,
+            text: 'Error al actualizar el medicamento',
             confirmButtonColor: '#00549F'
         });
     }

@@ -4,7 +4,7 @@
     <link rel="shortcut icon" href="/public/img/logo.png" type="image/png" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestionados - APD</title>
+    <title>Gestionar - APD</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -26,13 +26,7 @@
   <body>
     <%- include('partials/navbar', {active: 'managed'}) %>
 
-    <div class="container my-4">
-      <div class="row mb-4">
-        <div class="col">
-          <h2><i class="bi bi-clipboard2-check"></i> Gestionar Descuadres</h2>
-        </div>
-      </div>
-
+    <div class="container-fluid">
       <div class="card shadow-sm">
         <div class="card-body">
           <ul class="nav nav-tabs" role="tablist">
@@ -70,29 +64,29 @@
 
           <div class="tab-content mt-3">
             <div class="tab-pane fade show active" id="descuadres">
-              <div class="loader-container" style="display: none;">
-                <div class="loader"></div>
-              </div>
               <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaPendientes"></table>
+                <table
+                  class="table table-striped table-hover w-100"
+                  id="tablaPendientes"
+                ></table>
               </div>
             </div>
 
             <div class="tab-pane fade" id="enProceso">
-              <div class="loader-container" style="display: none;">
-                <div class="loader"></div>
-              </div>
               <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaEnProceso"></table>
+                <table
+                  class="table table-striped table-hover w-100"
+                  id="tablaEnProceso"
+                ></table>
               </div>
             </div>
 
             <div class="tab-pane fade" id="gestionados">
-              <div class="loader-container" style="display: none;">
-                <div class="loader"></div>
-              </div>
               <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaGestionados"></table>
+                <table
+                  class="table table-striped table-hover w-100"
+                  id="tablaGestionados"
+                ></table>
               </div>
             </div>
           </div>

@@ -14,39 +14,37 @@ document.addEventListener('DOMContentLoaded', function() {
         { data: 'descripcion', title: 'Descripción' },
         { 
             data: 'descuadre',
-            title: 'Descuadre',
+            title: 'Último Descuadre',
             render: function(data) {
-                const colorClass = data < 0 ? 'text-danger' : 'text-success';
-                return `<span class="${colorClass}">${data}</span>`;
+                return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data || 0}</span>`;
             }
         },
-        { 
+        {
             data: 'fecha_gestion',
             title: 'Fecha gestión',
             render: function(data) {
                 return data ? new Date(data).toLocaleString('es-ES') : '-';
             }
         },
-        { data: 'usuario', title: 'Gestionado por', defaultContent: '-' },
-        { data: 'categoria', title: 'Categoría', defaultContent: '-' },
-        { data: 'motivo', title: 'Motivo', defaultContent: '-' },
-        { 
-            data: 'observaciones',
-            title: 'Observaciones',
-            render: function(data) {
-                return data || '-';
-            }
-        },
         {
             data: null,
             title: 'Acciones',
+            className: 'text-center',
             render: function(data) {
                 return `
-                    <button class="btn btn-primary btn-sm gestionar"
-                            data-codigo="${data.codigo_med}"
-                            data-descripcion="${data.descripcion}">
-                        <i class="bi bi-pencil-square"></i> Gestionar
-                    </button>`;
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm ver-detalle" 
+                                data-codigo="${data.codigo_med}"
+                                title="Ver detalles">
+                            <i class="bi bi-info-circle"></i> Detalles
+                        </button>
+                        <button class="btn btn-success btn-sm ms-2 gestionar" 
+                                data-codigo="${data.codigo_med}"
+                                data-descripcion="${data.descripcion}"
+                                title="Gestionar">
+                            <i class="bi bi-pencil-square"></i> Gestionar
+                        </button>
+                    </div>`;
             }
         }
     ];
@@ -77,7 +75,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Agregar evento de gestionar para cada tabla
+        // Eventos de los botones
+        $(`#${tabId}`).on('click', '.ver-detalle', function() {
+            const codigo = $(this).data('codigo');
+            showMedicineDetails(codigo);
+        });
+
         $(`#${tabId}`).on('click', '.gestionar', function() {
             const codigo = $(this).data('codigo');
             const descripcion = $(this).data('descripcion');
@@ -127,6 +130,69 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, 300000);
+
+    // Event handler para ver detalles
+    $('.table').on('click', '.ver-detalle', async function() {
+        const codigo = $(this).data('codigo');
+        try {
+            const response = await fetch(`/api/managed/details/${codigo}`);
+            if (!response.ok) throw new Error('Error al obtener detalles');
+            const data = await response.json();
+
+            Swal.fire({
+                title: 'Detalles del Medicamento',
+                html: `
+                    <div class="text-start">
+                        <h6 class="mb-3">
+                            <i class="bi bi-capsule me-2"></i>${data.descripcion}
+                            <br>
+                            <small class="text-muted">
+                                <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
+                            </small>
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Estado:</th>
+                                    <td>${data.estado || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Categoría:</th>
+                                    <td>${data.categoria || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Motivo:</th>
+                                    <td>${data.motivo || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Observaciones:</th>
+                                    <td>${data.observaciones || 'Sin observaciones'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Fecha Gestión:</th>
+                                    <td>${new Date(data.fecha_gestion).toLocaleString('es-ES')}</td>
+                                </tr>
+                                <tr>
+                                    <th>Gestionado por:</th>
+                                    <td>${data.gestionado_por || 'N/A'}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                `,
+                width: '600px',
+                confirmButtonColor: '#00549F'
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al cargar los detalles',
+                confirmButtonColor: '#00549F'
+            });
+        }
+    });
 });
 
 // Función para gestionar descuadre
@@ -220,6 +286,70 @@ async function gestionarDescuadre(codigo, descripcion) {
             icon: 'error',
             title: 'Error',
             text: 'Error al gestionar el descuadre: ' + error.message,
+            confirmButtonColor: '#00549F'
+        });
+    }
+}
+
+async function showMedicineDetails(codigo) {
+    try {
+        const response = await fetch(`/api/managed/details/${codigo}`);
+        if (!response.ok) throw new Error('Error al obtener detalles');
+        
+        const data = await response.json();
+        
+        Swal.fire({
+            title: 'Detalles del Medicamento',
+            html: `
+                <div class="text-start">
+                    <h6 class="mb-3">
+                        <i class="bi bi-capsule me-2"></i>${data.descripcion}
+                        <br>
+                        <small class="text-muted">
+                            <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
+                        </small>
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <th>Estado:</th>
+                                    <td><span class="badge" style="background-color: ${data.estado_color}">${data.estado || 'N/A'}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Categoría:</th>
+                                    <td>${data.categoria || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Motivo:</th>
+                                    <td>${data.motivo || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Observaciones:</th>
+                                    <td>${data.observaciones || 'Sin observaciones'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Gestionado por:</th>
+                                    <td>${data.usuario || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Fecha gestión:</th>
+                                    <td>${new Date(data.fecha_gestion).toLocaleString('es-ES')}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            width: '600px',
+            confirmButtonColor: '#00549F'
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al cargar los detalles',
             confirmButtonColor: '#00549F'
         });
     }

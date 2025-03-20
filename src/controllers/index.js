@@ -466,80 +466,88 @@ const analysis_view = async (req, res) => {
 };
 
 const get_analysis = async (req, res) => {
-  try {
-    const { month } = req.params;
-    let whereClause = "";
-    let params = [];
+    try {
+        const { month } = req.params;
+        let whereClause = "";
+        let params = [];
 
-    if (month && month !== "all") {
-      const [year, m] = month.split("-");
-      whereClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
-      params = [year, m];
-    }
+        if (month && month !== "all") {
+            const [year, m] = month.split("-");
+            whereClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
+            params = [year, m];
+        }
 
-    // Optimizar la consulta usando índices y limitando resultados
-    const query = `
-        WITH RECURSIVE DailyChanges AS (
-            SELECT DISTINCT
-                d.codigo_med,
-                d.descripcion,
-                d.descuadre,
-                DATE(r.fecha_reporte) as fecha
-            FROM descuadres d
-            FORCE INDEX (idx_codigo_med)
-            JOIN reportes r ON d.id_reporte = r.id_reporte
-            ${whereClause}
-        ),
-        LastDescuadre AS (
-            SELECT 
-                codigo_med,
-                descuadre as ultimo_descuadre
-            FROM (
-                SELECT 
+        const query = `
+            WITH RECURSIVE DailyChanges AS (
+                SELECT DISTINCT
+                    d.codigo_med,
+                    d.descripcion,
+                    d.descuadre,
+                    DATE(r.fecha_reporte) as fecha,
+                    LAG(d.descuadre) OVER (PARTITION BY d.codigo_med ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
+                FROM descuadres d
+                JOIN reportes r ON d.id_reporte = r.id_reporte
+                ${whereClause}
+            ),
+            TendenciaChanges AS (
+                SELECT
                     codigo_med,
-                    descuadre,
-                    fecha,
-                    ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY fecha DESC) as rn
+                    descripcion,
+                    MAX(CASE WHEN descuadre <> COALESCE(prev_descuadre, descuadre) THEN 1 ELSE 0 END) as tiene_cambios_tendencia
                 FROM DailyChanges
-            ) ranked
-            WHERE rn = 1
-        ),
-        ModaCalculation AS (
-            SELECT 
-                d.codigo_med,
-                d.descuadre as moda
-            FROM DailyChanges d
-            GROUP BY d.codigo_med, d.descuadre
-            HAVING COUNT(*) >= ALL (
-                SELECT COUNT(*)
-                FROM DailyChanges d2
-                WHERE d2.codigo_med = d.codigo_med
-                GROUP BY d2.descuadre
+                GROUP BY codigo_med, descripcion
+            ),
+            LastDescuadre AS (
+                SELECT
+                    codigo_med,
+                    descuadre as ultimo_descuadre
+                FROM (
+                    SELECT
+                        codigo_med,
+                        descuadre,
+                        fecha,
+                        ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY fecha DESC) as rn
+                    FROM DailyChanges
+                ) ranked
+                WHERE rn = 1
+            ),
+            ModaCalculation AS (
+                SELECT
+                    codigo_med,
+                    descuadre as moda
+                FROM (
+                    SELECT
+                        codigo_med,
+                        descuadre,
+                        COUNT(*) as frecuencia,
+                        ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY COUNT(*) DESC) as rn
+                    FROM DailyChanges
+                    GROUP BY codigo_med, descuadre
+                ) ranked
+                WHERE rn = 1
             )
-        )
-        SELECT DISTINCT
-            dc.codigo_med,
-            dc.descripcion,
-            ld.ultimo_descuadre,
-            mc.moda
-        FROM DailyChanges dc
-        LEFT JOIN LastDescuadre ld ON dc.codigo_med = ld.codigo_med
-        LEFT JOIN ModaCalculation mc ON dc.codigo_med = mc.codigo_med
-        ORDER BY ld.ultimo_descuadre DESC
-        LIMIT 1000`;
+            SELECT 
+                tc.codigo_med,
+                tc.descripcion,
+                ld.ultimo_descuadre,
+                mc.moda,
+                tc.tiene_cambios_tendencia
+            FROM TendenciaChanges tc
+            JOIN LastDescuadre ld ON tc.codigo_med = ld.codigo_med
+            JOIN ModaCalculation mc ON tc.codigo_med = mc.codigo_med
+            ORDER BY tc.descripcion`;
 
-    connection.query(query, params, (error, results) => {
-      if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ error: error.message });
-      }
-      res.json({ analysis: results });
-    });
-
-  } catch (error) {
-    console.error("Error in get_analysis:", error);
-    res.status(500).json({ error: error.message });
-  }
+        connection.query(query, params, (error, results) => {
+            if (error) {
+                console.error("Database error:", error);
+                return res.status(500).json({ error: error.message });
+            }
+            res.json({ analysis: results });
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 const get_analysis_detail = async (req, res) => {
@@ -811,6 +819,44 @@ const get_managed_mismatches = async (req, res) => {
     }
 };
 
+const get_managed_details = async (req, res) => {
+    try {
+        const { codigo } = req.params;
+        const query = `
+            SELECT 
+                d.codigo_med,
+                d.descripcion,
+                d.descuadre,
+                mg.fecha_gestion,
+                u.nombre as usuario,
+                ed.nombre as estado,
+                ed.color as estado_color,
+                cd.nombre as categoria,
+                md.nombre as motivo,
+                mg.observaciones
+            FROM medicamentos_gestionados mg
+            JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+            JOIN usuarios u ON mg.id_usuario = u.id_usuario
+            JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+            LEFT JOIN categorias_descuadre cd ON mg.id_categoria = cd.id_categoria
+            LEFT JOIN motivos_descuadre md ON mg.id_motivo = md.id_motivo
+            WHERE d.codigo_med = ?
+            ORDER BY mg.fecha_gestion DESC
+            LIMIT 1`;
+
+        connection.query(query, [codigo], (error, results) => {
+            if (error) {
+                console.error("Database error:", error);
+                return res.status(500).json({ error: error.message });
+            }
+            res.json(results[0] || {});
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
   upload_view,
   upload_excel,
@@ -829,4 +875,5 @@ module.exports = {
   update_medicine_management,
   managed_view,
   get_managed_mismatches,
+  get_managed_details,
 };
