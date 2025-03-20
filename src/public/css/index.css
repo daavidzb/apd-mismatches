@@ -218,15 +218,16 @@ body {
 
 /* Loader styles */
 .loader-container {
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
-    min-height: 400px;
+    padding: 2rem;
+    position: relative;
 }
 
 .loader {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border: 5px solid #f3f3f3;
     border-radius: 50%;
     border-top: 5px solid #00549F;
@@ -346,4 +347,41 @@ body {
 /* Ajustar márgenes para el contenido principal */
 .main-content {
     margin-bottom: 2rem;
+}
+
+/* Estilos para el dropdown de usuario */
+.nav-link.user-dropdown {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.9) !important;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nav-link.user-dropdown:hover,
+.nav-link.user-dropdown:focus {
+    color: #ffffff !important;
+}
+
+.dropdown-menu {
+    margin-top: 0.5rem !important;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+}
+
+/* Estilos para las tablas */
+.table td {
+    vertical-align: middle;
+}
+
+.btn-gestionar {
+    white-space: nowrap;
 }

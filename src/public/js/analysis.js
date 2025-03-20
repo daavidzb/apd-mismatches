@@ -332,23 +332,28 @@ async function actualizarGestionMedicamento(codigo, datos) {
             })
         });
 
-        if (!response.ok) throw new Error('Error al actualizar el medicamento');
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Error al actualizar');
 
-        await updateAnalysisTable(); // Actualizar la tabla después de guardar
-
-        Swal.fire({
+        // Mostrar mensaje de éxito y redirigir
+        await Swal.fire({
             icon: 'success',
             title: 'Actualizado',
             text: 'Los cambios se han guardado correctamente',
-            confirmButtonColor: '#00549F'
+            confirmButtonColor: '#00549F',
+            timer: 1500,
+            showConfirmButton: false
         });
+
+        // Redirigir a la vista de gestionados
+        window.location.href = '/managed';
 
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al guardar los cambios',
+            text: 'Error al guardar los cambios: ' + error.message,
             confirmButtonColor: '#00549F'
         });
     }

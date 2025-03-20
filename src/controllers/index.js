@@ -607,31 +607,57 @@ const get_analysis_detail = async (req, res) => {
 };
 
 const update_medicine_status = async (req, res) => {
-  try {
-    const { code } = req.params;
-    const { id_categoria, id_motivo, id_estado, observaciones } = req.body;
-    
-    if (!req.user) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+    try {
+        const { code } = req.params;
+        const { id_categoria, id_motivo, id_estado, observaciones } = req.body;
+        
+        if (!req.user) {
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+
+        // Obtener el id_descuadre más reciente para ese código
+        const getDescuadreQuery = `
+            SELECT d.id_descuadre 
+            FROM descuadres d
+            JOIN reportes r ON d.id_reporte = r.id_reporte
+            WHERE d.codigo_med = ?
+            ORDER BY r.fecha_reporte DESC
+            LIMIT 1`;
+
+        connection.query(getDescuadreQuery, [code], async (error, results) => {
+            if (error) {
+                console.error('Error:', error);
+                return res.status(500).json({ error: error.message });
+            }
+
+            if (!results.length) {
+                return res.status(404).json({ error: 'Descuadre no encontrado' });
+            }
+
+            const id_descuadre = results[0].id_descuadre;
+
+            // Insertar en medicamentos_gestionados
+            const insertQuery = `
+                INSERT INTO medicamentos_gestionados 
+                (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
+                VALUES (?, ?, ?, ?, ?, ?)`;
+
+            connection.query(insertQuery, 
+                [id_descuadre, req.user.id_usuario, id_estado, id_categoria, id_motivo, observaciones],
+                (error) => {
+                    if (error) {
+                        console.error('Error:', error);
+                        return res.status(500).json({ error: error.message });
+                    }
+                    res.json({ success: true });
+                }
+            );
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: error.message });
     }
-
-    await connection.query(
-        `UPDATE descuadres 
-         SET id_categoria = ?,
-             id_motivo = ?,
-             id_estado = ?,
-             observaciones = ?,
-             fecha_actualizacion = CURRENT_TIMESTAMP,
-             id_usuario_gestion = ?
-         WHERE codigo_med = ?`,
-        [id_categoria, id_motivo, id_estado, observaciones, req.user.id_usuario, code]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: error.message });
-  }
 };
 
 const get_medicine_management = async (req, res) => {
@@ -749,42 +775,40 @@ const managed_view = async (req, res) => {
 };
 
 const get_managed_mismatches = async (req, res) => {
-  try {
-    const { status } = req.params;
+    try {
+        const { status } = req.params;
+        const query = `
+            SELECT 
+                d.codigo_med,
+                d.descripcion,
+                d.descuadre,
+                mg.fecha_gestion,
+                u.nombre as usuario,
+                ed.nombre as estado,
+                cd.nombre as categoria,
+                md.nombre as motivo,
+                mg.observaciones,
+                ed.color as estado_color
+            FROM medicamentos_gestionados mg
+            JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+            JOIN usuarios u ON mg.id_usuario = u.id_usuario
+            JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+            LEFT JOIN categorias_descuadre cd ON mg.id_categoria = cd.id_categoria
+            LEFT JOIN motivos_descuadre md ON mg.id_motivo = md.id_motivo
+            WHERE mg.id_estado = ?
+            ORDER BY mg.fecha_gestion DESC`;
 
-    const results = await new Promise((resolve, reject) => {
-      connection.query(
-        `
-                SELECT 
-                    d.codigo_med,
-                    d.descripcion,
-                    d.descuadre,
-                    c.nombre as categoria,
-                    m.nombre as motivo,
-                    d.observaciones,
-                    d.fecha_actualizacion,
-                    e.nombre as estado,
-                    e.color as estado_color
-                FROM descuadres d
-                JOIN estados_descuadre e ON d.id_estado = e.id_estado
-                LEFT JOIN categorias_descuadre c ON d.id_categoria = c.id_categoria
-                LEFT JOIN motivos_descuadre m ON d.id_motivo = m.id_motivo
-                WHERE e.nombre = ?
-                ORDER BY d.fecha_actualizacion DESC
-                `,
-        [status],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
-        }
-      );
-    });
-
-    res.json({ mismatches: results });
-  } catch (error) {
-    console.error("Error in get_managed_mismatches:", error);
-    res.status(500).json({ error: error.message });
-  }
+        connection.query(query, [status], (error, results) => {
+            if (error) {
+                console.error("Database error:", error);
+                return res.status(500).json({ error: error.message });
+            }
+            res.json({ managed: results });
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 module.exports = {
