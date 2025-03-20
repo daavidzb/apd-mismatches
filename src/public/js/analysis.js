@@ -40,9 +40,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const hasChanges = data.tiene_cambios_tendencia ? 
                                 '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : 
                                 '';
+                            const isManaged = data.gestionado_por ? 
+                                `<i class="bi bi-person-check-fill text-info ms-2" title="En gestión por: ${data.gestionado_por}"></i>` : 
+                                '';
                             return `<div class="d-flex align-items-center justify-content-between">
                                 ${data.descripcion}
-                                ${hasChanges}
+                                <div>
+                                    ${hasChanges}
+                                    ${isManaged}
+                                </div>
                             </div>`;
                         }
                     },
@@ -242,8 +248,7 @@ async function gestionarMedicamento(codigo, descripcion) {
             confirmButtonText: 'Guardar',
             showCancelButton: true,
             cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#00549F',
-            width: '600px'
+            confirmButtonColor: '#00549F'
         });
 
         if (result.isConfirmed) {
@@ -254,7 +259,39 @@ async function gestionarMedicamento(codigo, descripcion) {
                 observaciones: document.getElementById('observaciones').value
             };
 
-            await actualizarGestionMedicamento(codigo, gestionData);
+            const updateResponse = await fetch(`/api/analysis/update/${codigo}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(gestionData)
+            });
+
+            const updateData = await updateResponse.json();
+
+            if (!updateResponse.ok) {
+                if (updateData.isAlreadyManaged) {
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Medicamento ya gestionado',
+                        text: 'Este medicamento ya está siendo gestionado por otro usuario',
+                        confirmButtonColor: '#00549F'
+                    });
+                    window.location.href = '/managed';
+                    return;
+                }
+                throw new Error(updateData.error || 'Error al actualizar');
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Actualizado',
+                text: 'Los cambios se han guardado correctamente',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            window.location.href = '/managed';
         }
     } catch (error) {
         console.error('Error:', error);

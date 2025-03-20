@@ -466,88 +466,104 @@ const analysis_view = async (req, res) => {
 };
 
 const get_analysis = async (req, res) => {
-    try {
-        const { month } = req.params;
-        let whereClause = "";
-        let params = [];
+  try {
+    const { month } = req.params;
+    let whereClause = "";
+    let params = [];
 
-        if (month && month !== "all") {
-            const [year, m] = month.split("-");
-            whereClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
-            params = [year, m];
-        }
-
-        const query = `
-            WITH RECURSIVE DailyChanges AS (
-                SELECT DISTINCT
-                    d.codigo_med,
-                    d.descripcion,
-                    d.descuadre,
-                    DATE(r.fecha_reporte) as fecha,
-                    LAG(d.descuadre) OVER (PARTITION BY d.codigo_med ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
-                FROM descuadres d
-                JOIN reportes r ON d.id_reporte = r.id_reporte
-                ${whereClause}
-            ),
-            TendenciaChanges AS (
-                SELECT
-                    codigo_med,
-                    descripcion,
-                    MAX(CASE WHEN descuadre <> COALESCE(prev_descuadre, descuadre) THEN 1 ELSE 0 END) as tiene_cambios_tendencia
-                FROM DailyChanges
-                GROUP BY codigo_med, descripcion
-            ),
-            LastDescuadre AS (
-                SELECT
-                    codigo_med,
-                    descuadre as ultimo_descuadre
-                FROM (
-                    SELECT
-                        codigo_med,
-                        descuadre,
-                        fecha,
-                        ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY fecha DESC) as rn
-                    FROM DailyChanges
-                ) ranked
-                WHERE rn = 1
-            ),
-            ModaCalculation AS (
-                SELECT
-                    codigo_med,
-                    descuadre as moda
-                FROM (
-                    SELECT
-                        codigo_med,
-                        descuadre,
-                        COUNT(*) as frecuencia,
-                        ROW_NUMBER() OVER (PARTITION BY codigo_med ORDER BY COUNT(*) DESC) as rn
-                    FROM DailyChanges
-                    GROUP BY codigo_med, descuadre
-                ) ranked
-                WHERE rn = 1
-            )
-            SELECT 
-                tc.codigo_med,
-                tc.descripcion,
-                ld.ultimo_descuadre,
-                mc.moda,
-                tc.tiene_cambios_tendencia
-            FROM TendenciaChanges tc
-            JOIN LastDescuadre ld ON tc.codigo_med = ld.codigo_med
-            JOIN ModaCalculation mc ON tc.codigo_med = mc.codigo_med
-            ORDER BY tc.descripcion`;
-
-        connection.query(query, params, (error, results) => {
-            if (error) {
-                console.error("Database error:", error);
-                return res.status(500).json({ error: error.message });
-            }
-            res.json({ analysis: results });
-        });
-    } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ error: error.message });
+    if (month && month !== "all") {
+      const [year, m] = month.split("-");
+      whereClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
+      params = [year, m];
     }
+
+    const query = `
+        WITH RECURSIVE DailyChanges AS (
+            SELECT DISTINCT
+                d.codigo_med,
+                d.descripcion,
+                d.descuadre,
+                DATE(r.fecha_reporte) as fecha,
+                LAG(d.descuadre) OVER (PARTITION BY d.codigo_med ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
+            FROM descuadres d
+            JOIN reportes r ON d.id_reporte = r.id_reporte
+            ${whereClause}
+        ),
+        TendenciaChanges AS (
+            SELECT
+                codigo_med,
+                descripcion,
+                MAX(CASE WHEN descuadre <> COALESCE(prev_descuadre, descuadre) THEN 1 ELSE 0 END) as tiene_cambios_tendencia
+            FROM DailyChanges
+            GROUP BY codigo_med, descripcion
+        ),
+        LastDescuadre AS (
+            SELECT
+                d.codigo_med,
+                d.descuadre as ultimo_descuadre
+            FROM descuadres d
+            JOIN reportes r ON d.id_reporte = r.id_reporte
+            WHERE (d.codigo_med, r.fecha_reporte) IN (
+                SELECT 
+                    d2.codigo_med,
+                    MAX(r2.fecha_reporte)
+                FROM descuadres d2
+                JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
+                GROUP BY d2.codigo_med
+            )
+        ),
+        ModaCalculation AS (
+            SELECT
+                d.codigo_med,
+                d.descuadre as moda
+            FROM descuadres d
+            JOIN reportes r ON d.id_reporte = r.id_reporte
+            GROUP BY d.codigo_med, d.descuadre
+            HAVING COUNT(*) = (
+                SELECT COUNT(*)
+                FROM descuadres d2
+                JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
+                WHERE d2.codigo_med = d.codigo_med
+                GROUP BY d2.descuadre
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+            )
+        ),
+        GestionInfo AS (
+            SELECT 
+                d.codigo_med,
+                u.nombre as gestionado_por,
+                mg.id_estado
+            FROM medicamentos_gestionados mg
+            JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+            JOIN usuarios u ON mg.id_usuario = u.id_usuario
+            WHERE mg.id_estado != 3
+            ORDER BY mg.fecha_gestion DESC
+        )
+        SELECT 
+            tc.codigo_med,
+            tc.descripcion,
+            ld.ultimo_descuadre,
+            mc.moda,
+            tc.tiene_cambios_tendencia,
+            gi.gestionado_por
+        FROM TendenciaChanges tc
+        JOIN LastDescuadre ld ON tc.codigo_med = ld.codigo_med
+        JOIN ModaCalculation mc ON tc.codigo_med = mc.codigo_med
+        LEFT JOIN GestionInfo gi ON tc.codigo_med = gi.codigo_med
+        ORDER BY tc.descripcion`;
+
+    connection.query(query, params, (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json({ analysis: results });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 const get_analysis_detail = async (req, res) => {
@@ -615,57 +631,99 @@ const get_analysis_detail = async (req, res) => {
 };
 
 const update_medicine_status = async (req, res) => {
-    try {
-        const { code } = req.params;
-        const { id_categoria, id_motivo, id_estado, observaciones } = req.body;
-        
-        if (!req.user) {
-            return res.status(401).json({ error: 'Usuario no autenticado' });
-        }
+  try {
+    const { code } = req.params;
+    const { id_categoria, id_motivo, id_estado, observaciones } = req.body;
 
-        // Obtener el id_descuadre más reciente para ese código
-        const getDescuadreQuery = `
-            SELECT d.id_descuadre 
-            FROM descuadres d
-            JOIN reportes r ON d.id_reporte = r.id_reporte
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    // Verificar si el medicamento ya está siendo gestionado por otro usuario
+    const checkQuery = `
+            SELECT mg.id_descuadre, mg.id_usuario, u.nombre as nombre_usuario
+            FROM medicamentos_gestionados mg
+            JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+            JOIN usuarios u ON mg.id_usuario = u.id_usuario
             WHERE d.codigo_med = ?
-            ORDER BY r.fecha_reporte DESC
+            ORDER BY mg.fecha_gestion DESC
             LIMIT 1`;
 
-        connection.query(getDescuadreQuery, [code], async (error, results) => {
-            if (error) {
-                console.error('Error:', error);
-                return res.status(500).json({ error: error.message });
-            }
+    connection.query(checkQuery, [code], async (error, checkResults) => {
+      if (error) {
+        console.error("Error:", error);
+        return res.status(500).json({ error: error.message });
+      }
 
-            if (!results.length) {
-                return res.status(404).json({ error: 'Descuadre no encontrado' });
-            }
-
-            const id_descuadre = results[0].id_descuadre;
-
-            // Insertar en medicamentos_gestionados
-            const insertQuery = `
-                INSERT INTO medicamentos_gestionados 
-                (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
-                VALUES (?, ?, ?, ?, ?, ?)`;
-
-            connection.query(insertQuery, 
-                [id_descuadre, req.user.id_usuario, id_estado, id_categoria, id_motivo, observaciones],
-                (error) => {
-                    if (error) {
-                        console.error('Error:', error);
-                        return res.status(500).json({ error: error.message });
-                    }
-                    res.json({ success: true });
-                }
-            );
+      // Si está gestionado por otro usuario, no permitir la actualización
+      if (
+        checkResults.length > 0 &&
+        checkResults[0].id_usuario !== req.user.id_usuario
+      ) {
+        return res.status(400).json({
+          error: "Este medicamento está siendo gestionado por otro usuario",
+          isAlreadyManaged: true,
+          managedBy: checkResults[0].nombre_usuario,
         });
+      }
 
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
+      // Continuar con la actualización
+      const getDescuadreQuery = `
+                SELECT d.id_descuadre 
+                FROM descuadres d
+                JOIN reportes r ON d.id_reporte = r.id_reporte
+                WHERE d.codigo_med = ?
+                ORDER BY r.fecha_reporte DESC
+                LIMIT 1`;
+
+      connection.query(getDescuadreQuery, [code], async (error, results) => {
+        if (error) {
+          console.error("Error:", error);
+          return res.status(500).json({ error: error.message });
+        }
+
+        if (!results.length) {
+          return res.status(404).json({ error: "Descuadre no encontrado" });
+        }
+
+        const id_descuadre = results[0].id_descuadre;
+
+        // Insertar o actualizar en medicamentos_gestionados
+        const upsertQuery = `
+                    INSERT INTO medicamentos_gestionados 
+                    (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                    id_estado = VALUES(id_estado),
+                    id_categoria = VALUES(id_categoria),
+                    id_motivo = VALUES(id_motivo),
+                    observaciones = VALUES(observaciones),
+                    fecha_gestion = CURRENT_TIMESTAMP`;
+
+        connection.query(
+          upsertQuery,
+          [
+            id_descuadre,
+            req.user.id_usuario,
+            id_estado,
+            id_categoria,
+            id_motivo,
+            observaciones,
+          ],
+          (error) => {
+            if (error) {
+              console.error("Error:", error);
+              return res.status(500).json({ error: error.message });
+            }
+            res.json({ success: true });
+          }
+        );
+      });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 const get_medicine_management = async (req, res) => {
@@ -783,9 +841,9 @@ const managed_view = async (req, res) => {
 };
 
 const get_managed_mismatches = async (req, res) => {
-    try {
-        const { status } = req.params;
-        const query = `
+  try {
+    const { status } = req.params;
+    const query = `
             SELECT 
                 d.codigo_med,
                 d.descripcion,
@@ -806,23 +864,23 @@ const get_managed_mismatches = async (req, res) => {
             WHERE mg.id_estado = ?
             ORDER BY mg.fecha_gestion DESC`;
 
-        connection.query(query, [status], (error, results) => {
-            if (error) {
-                console.error("Database error:", error);
-                return res.status(500).json({ error: error.message });
-            }
-            res.json({ managed: results });
-        });
-    } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ error: error.message });
-    }
+    connection.query(query, [status], (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json({ managed: results });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 const get_managed_details = async (req, res) => {
-    try {
-        const { codigo } = req.params;
-        const query = `
+  try {
+    const { codigo } = req.params;
+    const query = `
             SELECT DISTINCT
                 d.codigo_med,
                 d.descripcion,
@@ -847,20 +905,22 @@ const get_managed_details = async (req, res) => {
             ORDER BY mg.fecha_gestion DESC
             LIMIT 1`;
 
-        connection.query(query, [codigo], (error, results) => {
-            if (error) {
-                console.error("Database error:", error);
-                return res.status(500).json({ error: error.message });
-            }
-            if (!results.length) {
-                return res.status(404).json({ error: 'No se encontraron detalles para este medicamento' });
-            }
-            res.json(results[0]);
-        });
-    } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ error: error.message });
-    }
+    connection.query(query, [codigo], (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      if (!results.length) {
+        return res
+          .status(404)
+          .json({ error: "No se encontraron detalles para este medicamento" });
+      }
+      res.json(results[0]);
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 module.exports = {
