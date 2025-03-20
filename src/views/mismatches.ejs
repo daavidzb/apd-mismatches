@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <link rel="shortcut icon" href="/public/img/logo.png" type="image/png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Descuadres - APD</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+    <link rel="stylesheet" href="/public/css/index.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container-fluid">
+        <div class="navbar-brand-container">
+          <a class="navbar-brand" href="/upload">
+            <img
+              src="/public/img/logo.png"
+              alt="APD Logo"
+              class="navbar-logo"
+            />
+          </a>
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/upload">
+                <i class="bi bi-cloud-upload me-1"></i>
+                Subir
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="/">
+                <i class="bi bi-table me-1"></i>
+                Histórico
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/reports">
+                <i class="bi bi-graph-up-arrow me-1"></i>
+                Reportes
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/analysis">
+                <i class="bi bi-clipboard2-data me-1"></i>
+                Análisis
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/managed">
+                <i class="bi bi-check2-circle me-1"></i>
+                Gestionados
+              </a>
+            </li>
+            <!-- <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Actualizar
+              </a>
+            </li> -->
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container-fluid">
+      <div class="table-container">
+        <h2 class="mb-4">Descuadres de Medicamentos - HUNJ</h2>
+        <table id="descuadresTable" class="table table-striped">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>FarmaTools</th>
+              <th>ArmarioAPD</th>
+              <th>Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% descuadres.forEach(function(item) { %>
+            <tr>
+              <td><%= new Date(item.fecha_reporte).toLocaleDateString() %></td>
+              <td><%= item.codigo_med %></td>
+              <td><%= item.descripcion %></td>
+              <td><%= item.cantidad_farmatools %></td>
+              <td><%= item.cantidad_armario_apd %></td>
+              <td
+                class="<%= item.descuadre < 0 ? 'descuadre-negativo' : 'descuadre-positivo' %>"
+              >
+                <%= item.descuadre %>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="/public/js/mismatches.js"></script>
+  </body>
+</html>

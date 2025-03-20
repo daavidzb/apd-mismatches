@@ -1,0 +1,2 @@
+mkdir -p src/public/uploads
+touch src/public/uploads/.gitkeep

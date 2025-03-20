@@ -1,0 +1,210 @@
+body {
+  background-color: #f4f6f9;
+}
+.navbar {
+  background-color: #00549f;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand-container {
+  display: flex;
+  align-items: center;
+  margin-right: 2rem;
+}
+
+.navbar-brand {
+  padding: 0;
+  margin: 0;
+}
+
+.navbar-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.navbar-nav {
+  margin-left: auto;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem !important;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.navbar-brand img {
+  height: 40px;
+  width: auto;
+  vertical-align: middle;
+}
+.navbar-dark .navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.navbar-dark .navbar-nav .nav-link.active {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.nav-link i {
+  font-size: 1.1rem;
+}
+.table-container {
+  margin: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.descuadre-negativo {
+  color: red;
+}
+.descuadre-positivo {
+  color: green;
+}
+.navbar-brand {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.navbar-brand img {
+  height: 40px;
+}
+.container {
+  max-width: 95%; 
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.btn-primary {
+  background-color: #00549f;
+  border: none;
+}
+.btn-primary:hover {
+  background-color: #003f7f;
+}
+.file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+  background-color: #217346;
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+.file-preview {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.search-item:hover {
+  background-color: #f8f9fa;
+}
+
+#searchResults {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#searchResults .search-item {
+  transition: background-color 0.2s;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.card-body {
+    padding: 2rem;
+    width: 100%;
+}
+
+#reportTabsContent {
+    margin-top: 2rem;
+    width: 100%;
+}
+
+#reportTabsContent .tab-pane {
+    padding: 0.5rem;
+    width: 100%;
+}
+
+#summaryChart,
+#evolutionChart,
+#compareChart {
+    width: 100%;
+    min-height: 450px;
+    margin-top: 1rem;
+}
+
+.table-responsive {
+    margin-top: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.container.my-4 {
+    max-width: 95%;
+    margin: 2rem auto;
+}
+
+#analysisTable {
+    width: 100% !important;
+    margin-top: 1rem;
+}
+
+#analysisTable_wrapper {
+    padding: 0;
+}
+
+.dt-buttons {
+    margin-bottom: 1rem;
+}
+
+.dt-button {
+    margin-right: 0.5rem;
+}
+
+.table-responsive {
+    margin-top: 1rem;
+    overflow: visible;
+    max-height: none;
+}
+
+#analysisTable th,
+#analysisTable td {
+    white-space: nowrap;
+    padding: 0.75rem;
+}
+
+#analysisTable th:last-child,
+#analysisTable td:last-child {
+    width: 100px;
+    text-align: center;
+}

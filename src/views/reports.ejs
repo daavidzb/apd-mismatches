@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <link rel="shortcut icon" href="/public/img/logo.png" type="image/png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reportes - APD</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+    <link rel="stylesheet" href="/public/css/index.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container-fluid">
+        <div class="navbar-brand-container">
+          <a class="navbar-brand" href="/upload">
+            <img
+              src="/public/img/logo.png"
+              alt="APD Logo"
+              class="navbar-logo"
+            />
+          </a>
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/upload">
+                <i class="bi bi-cloud-upload me-1"></i>
+                Subir
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/mismatches">
+                <i class="bi bi-table me-1"></i>
+                Histórico
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="/reports">
+                <i class="bi bi-graph-up-arrow me-1"></i>
+                Reportes
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/analysis">
+                <i class="bi bi-clipboard2-data me-1"></i>
+                Análisis
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/managed">
+                <i class="bi bi-check2-circle me-1"></i>
+                Gestionados
+              </a>
+            </li>
+            <!-- <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Actualizar
+              </a>
+            </li> -->
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container my-4">
+      <div class="row mb-4">
+        <div class="col">
+          <h2><i class="bi bi-graph-up"></i> Reportes</h2>
+        </div>
+      </div>
+      <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+        <li class="nav-item">
+          <a
+            class="nav-link active"
+            id="summary-tab"
+            data-bs-toggle="tab"
+            href="#summary"
+            role="tab"
+          >
+            <i class="bi bi-clipboard-data"></i> Resumen Mensual
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            id="top-meds-tab"
+            data-bs-toggle="tab"
+            href="#top-meds"
+            role="tab"
+          >
+            <i class="bi bi-list-ol"></i> Top Medicamentos
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            id="evolution-tab"
+            data-bs-toggle="tab"
+            href="#evolution"
+            role="tab"
+          >
+            <i class="bi bi-activity"></i> Evolución
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            id="compare-tab"
+            data-bs-toggle="tab"
+            href="#compare"
+            role="tab"
+          >
+            <i class="bi bi-bar-chart"></i> Comparativa
+          </a>
+        </li>
+      </ul>
+
+      <div class="tab-content mt-3" id="reportTabsContent">
+        <div class="tab-pane fade show active" id="summary" role="tabpanel">
+          <div class="card shadow-sm h-100" style="min-height: 600px">
+            <div class="card-body p-4">
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <select class="form-select" id="summaryMonth"></select>
+                </div>
+              </div>
+              <div id="summaryChart"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="top-meds" role="tabpanel">
+          <div class="card shadow-sm h-100" style="min-height: 600px">
+            <div class="card-body p-4">
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <select class="form-select" id="topMedsMonth"></select>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-striped" id="topMedsTable">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Descripción</th>
+                      <th>Total Descuadres</th>
+                      <th>Frecuencia</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="evolution" role="tabpanel">
+          <div class="card shadow-sm h-100" style="min-height: 600px">
+            <div class="card-body p-4">
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <div class="position-relative">
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="medicineSearch"
+                        placeholder="Buscar por código o nombre..."
+                        autocomplete="off"
+                      />
+                      <div
+                        id="searchResults"
+                        class="position-absolute w-100 d-none"
+                        style="
+                          z-index: 1000;
+                          max-height: 200px;
+                          overflow-y: auto;
+                          background: white;
+                          border: 1px solid #ddd;
+                          border-radius: 4px;
+                        "
+                      ></div>
+                    </div>
+                    <input type="hidden" id="selectedMedicineCode" />
+                  </div>
+                </div>
+              </div>
+              <div id="evolutionChart"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="compare" role="tabpanel">
+          <div class="card shadow-sm h-100" style="min-height: 600px">
+            <div class="card-body p-4">
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <select class="form-select mb-2" id="compareMonth1">
+                    <!-- Se poblará con JavaScript -->
+                  </select>
+                  <select class="form-select" id="compareMonth2">
+                    <!-- Se poblará con JavaScript -->
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12 mb-4">
+                  <div id="compareSummaryChart"></div>
+                </div>
+                <div class="col-12">
+                  <div id="compareDetailChart"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="/public/js/reports.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </body>
+</html>
