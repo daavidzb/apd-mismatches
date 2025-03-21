@@ -1,19 +1,12 @@
-<nav class="navbar navbar-expand-lg navbar-dark">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="navbar-title text-start">
-                <% if (active === 'upload') { %>
-                    <h1 class="h4 mb-0">Analizador de Descuadres</h1>
-                <% } else if (active === 'analysis') { %>
-                    <h1 class="h4 mb-0">Análisis de Descuadres</h1>
-                <% } else if (active === 'reports') { %>
-                    <h1 class="h4 mb-0">Reportes de Descuadres</h1>
-                <% } else if (active === 'managed') { %>
-                    <h1 class="h4 mb-0">Gestión de Descuadres</h1>
-                <% } else if (active === 'mismatches') { %>
-                    <h1 class="h4 mb-0">Histórico de Descuadres</h1>
-                <% } %>
-            </div>
+        <div class="navbar-brand-container d-lg-none">
+            <a class="navbar-brand" href="/dashboard">
+                <img src="/public/img/logo.png" alt="APD Logo" class="navbar-logo" />
+            </a>
+        </div>
+        
+        <div class="ms-auto">
             <% if (user) { %>
                 <div class="dropdown">
                     <button class="btn btn-link dropdown-toggle nav-user-button" 
@@ -25,10 +18,10 @@
                             <div class="user-avatar">
                                 <i class="bi bi-person"></i>
                             </div>
-                            <span class="user-name"><%= user.nombre %></span>
+                            <span class="user-name d-none d-md-inline"><%= user.nombre %></span>
                         </div>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
                         <li>
                             <span class="dropdown-item-text">
                                 <i class="bi bi-person-badge"></i>
@@ -51,54 +44,67 @@
 
 <div class="sidebar">
     <div class="sidebar-header">
-        <a class="navbar-brand" href="/upload">
+        <a class="navbar-brand" href="/dashboard">
             <img src="/public/img/logo.png" alt="APD Logo" class="sidebar-logo" />
         </a>
     </div>
     
     <ul class="nav flex-column">
         <li class="nav-item">
+            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
-                <i class="bi bi-cloud-upload me-2"></i> Subir
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
-                <i class="bi bi-table me-2"></i> Histórico
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
-                <i class="bi bi-graph-up-arrow me-2"></i> Reportes
+                <i class="bi bi-file-earmark-excel me-2"></i> Subir Excel
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
-                <i class="bi bi-clipboard2-data me-2"></i> Análisis
+                <i class="bi bi-graph-up me-2"></i> Análisis
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
-                <i class="bi bi-check2-circle me-2"></i> Gestionar
+                <i class="bi bi-sliders me-2"></i> Gestión
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
+                <i class="bi bi-list-check me-2"></i> Histórico
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i> Reportes
             </a>
         </li>
     </ul>
 
     <div class="sidebar-footer">
-        <% if (user) { %>
-            <div class="user-section">
-                <a href="/auth/logout" class="btn btn-link logout-btn">
-                    <i class="bi bi-box-arrow-right"></i>
-                    Cerrar sesión
-                </a>
-                <div class="user-info">
-                  <div class="user-avatar">
-                      <i class="bi bi-person"></i>
-                  </div>
-                  <span class="user-name"><%= user.nombre %></span>
-              </div>
-            </div>
-        <% } %>
+        <div class="dropup w-100">
+            <button class="btn btn-link user-dropdown" type="button" data-bs-toggle="dropdown">
+                <div class="d-flex align-items-center">
+                    <div class="user-avatar me-2">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div class="user-info flex-grow-1 text-start">
+                        <div class="user-name"><%= user.nombre %></div>
+                        <small class="text-muted"><%= user.username %></small>
+                    </div>
+                    <i class="bi bi-chevron-up ms-2"></i>
+                </div>
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item text-danger" href="/auth/logout">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Cerrar sesión
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 

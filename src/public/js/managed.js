@@ -54,9 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Función para inicializar tabla
     function initTable(tabId, status) {
         if (tables[tabId]) {
-            // Remover event listeners antiguos
-            $(`#${tabId}`).off('click', '.ver-detalle');
-            $(`#${tabId}`).off('click', '.gestionar');
             tables[tabId].destroy();
         }
 
@@ -64,7 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
             ...configBase,
             ajax: {
                 url: `/api/managed/${status}`,
-                dataSrc: 'managed'
+                dataSrc: 'managed',
+                error: function(xhr, error, thrown) {
+                    console.error('Error:', error);
+                }
             },
             columns: columnasBase
         });
@@ -146,7 +146,7 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Categoría</label>
-                        <select class="form-select" id="categoria">
+                        <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
                             <option value="">Seleccionar categoría...</option>
                             ${data.categorias.map(cat => `
                                 <option value="${cat.id_categoria}"
@@ -158,15 +158,10 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Motivo</label>
-                        <select class="form-select" id="motivo">
+                        <select class="form-select" id="motivo" disabled>
                             <option value="">Seleccionar motivo...</option>
-                            ${data.motivos.map(mot => `
-                                <option value="${mot.id_motivo}"
-                                    ${currentDetails.id_motivo === mot.id_motivo ? 'selected' : ''}>
-                                    ${mot.nombre}
-                                </option>
-                            `).join('')}
                         </select>
+                        <div data-motivos='${JSON.stringify(data.motivos)}' style="display:none"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Observaciones</label>
@@ -174,11 +169,30 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
                     </div>
                 </div>
             `,
+            didOpen: () => {
+                const categoriaSelect = document.getElementById('categoria');
+                if (categoriaSelect.value) {
+                    actualizarMotivos(categoriaSelect.value, currentDetails.id_motivo);
+                }
+            },
+            preConfirm: () => {
+                const categoria = document.getElementById('categoria').value;
+                const motivo = document.getElementById('motivo').value;
+                
+                if (!categoria) {
+                    Swal.showValidationMessage('Debes seleccionar una categoría');
+                    return false;
+                }
+                if (!motivo) {
+                    Swal.showValidationMessage('Debes seleccionar un motivo');
+                    return false;
+                }
+                return true;
+            },
             confirmButtonText: 'Guardar',
             showCancelButton: true,
             cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#00549F',
-            width: '600px'
+            confirmButtonColor: '#00549F'
         });
 
         if (result.isConfirmed) {
@@ -189,15 +203,19 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
                 observaciones: document.getElementById('observaciones').value
             };
 
-            const updateResponse = await fetch(`/api/analysis/update/${codigo}`, {
-                method: 'POST',
+            // Cambiar la ruta a la API de managed
+            const updateResponse = await fetch(`/api/managed/update/${codigo}`, {
+                method: 'PUT', // Cambiar a PUT para indicar actualización
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(gestionData)
             });
 
-            if (!updateResponse.ok) throw new Error('Error al actualizar');
+            if (!updateResponse.ok) {
+                const errorData = await updateResponse.json();
+                throw new Error(errorData.error || 'Error al actualizar');
+            }
 
             await Swal.fire({
                 icon: 'success',
@@ -207,12 +225,14 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
                 showConfirmButton: false
             });
 
-            // Recargar todas las tablas
-            Object.values(tables).forEach(table => {
-                if (table) {
-                    table.ajax.reload();
-                }
-            });
+            // Recargar todas las tablas después de un breve delay
+            setTimeout(() => {
+                Object.values(tables).forEach(table => {
+                    if (table) {
+                        table.ajax.reload();
+                    }
+                });
+            }, 500);
         }
     } catch (error) {
         console.error('Error:', error);
@@ -222,6 +242,37 @@ async function gestionarDescuadre(codigo, descripcion, tables) {
             text: 'Error al gestionar el descuadre: ' + error.message,
             confirmButtonColor: '#00549F'
         });
+    }
+}
+
+// Función compartida para actualizar motivos
+function actualizarMotivos(categoriaId, motivoSeleccionado = null) {
+    const motivosSelect = document.getElementById('motivo');
+    motivosSelect.disabled = true;
+    motivosSelect.innerHTML = '<option value="">Seleccionar motivo...</option>';
+
+    if (!categoriaId) {
+        return;
+    }
+
+    const motivos = Array.from(document.querySelectorAll('#swal2-html-container [data-motivos]'))
+        .find(el => el)?.dataset.motivos;
+
+    if (motivos) {
+        const motivosData = JSON.parse(motivos);
+        const motivosFiltrados = motivosData.filter(m => m.id_categoria == categoriaId);
+
+        motivosFiltrados.forEach(motivo => {
+            const option = document.createElement('option');
+            option.value = motivo.id_motivo;
+            option.textContent = motivo.nombre;
+            if (motivoSeleccionado && motivo.id_motivo == motivoSeleccionado) {
+                option.selected = true;
+            }
+            motivosSelect.appendChild(option);
+        });
+
+        motivosSelect.disabled = false;
     }
 }
 

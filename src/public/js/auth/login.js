@@ -1,5 +1,9 @@
-document.querySelector('form').addEventListener('submit', async (e) => {
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
     
     try {
         const response = await fetch('/auth/login', {
@@ -8,23 +12,15 @@ document.querySelector('form').addEventListener('submit', async (e) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                username: document.querySelector('[name="username"]').value,
-                password: document.querySelector('[name="password"]').value
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
             })
         });
 
         const data = await response.json();
         
         if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Bienvenido!',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                window.location.href = '/';
-            });
+            window.location.href = '/dashboard';
         } else {
             Swal.fire({
                 icon: 'error',
@@ -32,6 +28,8 @@ document.querySelector('form').addEventListener('submit', async (e) => {
                 text: data.message,
                 confirmButtonColor: '#00549F'
             });
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Ingresar';
         }
     } catch (error) {
         console.error('Error:', error);
@@ -41,5 +39,7 @@ document.querySelector('form').addEventListener('submit', async (e) => {
             text: 'Error al iniciar sesión',
             confirmButtonColor: '#00549F'
         });
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Ingresar';
     }
 });

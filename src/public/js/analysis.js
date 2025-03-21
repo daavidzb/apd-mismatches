@@ -34,20 +34,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 columns: [
                     { data: 'codigo_med', title: 'Código' },
                     { 
-                        data: null, 
+                        data: 'descripcion', 
                         title: 'Descripción',
-                        render: function(data) {
-                            const hasChanges = data.tiene_cambios_tendencia ? 
-                                '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : 
-                                '';
-                            const isManaged = data.gestionado_por ? 
-                                `<i class="bi bi-person-check-fill text-info ms-2" title="En gestión por: ${data.gestionado_por}"></i>` : 
-                                '';
+                        render: function(data, type, row) {
+                            const hasChanges = row.tiene_cambios_tendencia ?
+                                '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : '';
+                            
+                            let statusIcon = '';
+                            if (row.estado_gestion === 'Corregido') {
+                                statusIcon = `<i class="bi bi-check-circle-fill text-success ms-2" 
+                                               title="Corregido el ${new Date(row.fecha_gestion).toLocaleString('es-ES')}"></i>`;
+                            } else if (row.gestionado_por) {
+                                statusIcon = `<i class="bi bi-person-check-fill text-info ms-2" 
+                                               title="En gestión por: ${row.gestionado_por}"></i>`;
+                            }
+
                             return `<div class="d-flex align-items-center justify-content-between">
-                                ${data.descripcion}
+                                <span class="${row.estado_gestion === 'Corregido' ? 'text-decoration-line-through' : ''}">${data}</span>
                                 <div>
                                     ${hasChanges}
-                                    ${isManaged}
+                                    ${statusIcon}
                                 </div>
                             </div>`;
                         }
@@ -211,7 +217,8 @@ async function gestionarMedicamento(codigo, descripcion) {
                         <label class="form-label">Estado</label>
                         <select class="form-select" id="estado">
                             ${data.estados.map(estado => `
-                                <option value="${estado.id_estado}">
+                                <option value="${estado.id_estado}"
+                                    ${data.medicamento.id_estado === estado.id_estado ? 'selected' : ''}>
                                     ${estado.nombre}
                                 </option>
                             `).join('')}
@@ -219,10 +226,11 @@ async function gestionarMedicamento(codigo, descripcion) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Categoría</label>
-                        <select class="form-select" id="categoria">
+                        <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
                             <option value="">Seleccionar categoría...</option>
                             ${data.categorias.map(cat => `
-                                <option value="${cat.id_categoria}">
+                                <option value="${cat.id_categoria}"
+                                    ${data.medicamento.id_categoria === cat.id_categoria ? 'selected' : ''}>
                                     ${cat.nombre}
                                 </option>
                             `).join('')}
@@ -230,21 +238,37 @@ async function gestionarMedicamento(codigo, descripcion) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Motivo</label>
-                        <select class="form-select" id="motivo">
+                        <select class="form-select" id="motivo" disabled>
                             <option value="">Seleccionar motivo...</option>
-                            ${data.motivos.map(mot => `
-                                <option value="${mot.id_motivo}">
-                                    ${mot.nombre}
-                                </option>
-                            `).join('')}
                         </select>
+                        <div id="motivosData" data-motivos='${JSON.stringify(data.motivos)}' style="display:none"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                        <textarea class="form-control" id="observaciones" rows="3">${data.medicamento.observaciones || ''}</textarea>
                     </div>
                 </div>
             `,
+            didOpen: () => {
+                const categoriaSelect = document.getElementById('categoria');
+                if (categoriaSelect.value) {
+                    actualizarMotivos(categoriaSelect.value, data.medicamento.id_motivo);
+                }
+            },
+            preConfirm: () => {
+                const categoria = document.getElementById('categoria').value;
+                const motivo = document.getElementById('motivo').value;
+                
+                if (!categoria) {
+                    Swal.showValidationMessage('Debes seleccionar una categoría');
+                    return false;
+                }
+                if (!motivo) {
+                    Swal.showValidationMessage('Debes seleccionar un motivo');
+                    return false;
+                }
+                return true;
+            },
             confirmButtonText: 'Guardar',
             showCancelButton: true,
             cancelButtonText: 'Cancelar',
@@ -252,46 +276,13 @@ async function gestionarMedicamento(codigo, descripcion) {
         });
 
         if (result.isConfirmed) {
-            const gestionData = {
+            const datos = {
                 id_estado: document.getElementById('estado').value,
                 id_categoria: document.getElementById('categoria').value,
                 id_motivo: document.getElementById('motivo').value,
                 observaciones: document.getElementById('observaciones').value
             };
-
-            const updateResponse = await fetch(`/api/analysis/update/${codigo}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(gestionData)
-            });
-
-            const updateData = await updateResponse.json();
-
-            if (!updateResponse.ok) {
-                if (updateData.isAlreadyManaged) {
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'Medicamento ya gestionado',
-                        text: 'Este medicamento ya está siendo gestionado por otro usuario',
-                        confirmButtonColor: '#00549F'
-                    });
-                    window.location.href = '/managed';
-                    return;
-                }
-                throw new Error(updateData.error || 'Error al actualizar');
-            }
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Actualizado',
-                text: 'Los cambios se han guardado correctamente',
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            window.location.href = '/managed';
+            await actualizarGestionMedicamento(codigo, datos);
         }
     } catch (error) {
         console.error('Error:', error);
@@ -301,6 +292,47 @@ async function gestionarMedicamento(codigo, descripcion) {
             text: 'Error al gestionar el medicamento',
             confirmButtonColor: '#00549F'
         });
+    }
+}
+
+// Función para actualizar los motivos según la categoría seleccionada
+function actualizarMotivos(categoriaId, motivoSeleccionado = null) {
+    const motivosSelect = document.getElementById('motivo');
+    motivosSelect.disabled = true;
+    motivosSelect.innerHTML = '<option value="">Seleccionar motivo...</option>';
+
+    if (!categoriaId) {
+        return;
+    }
+
+    const motivosData = document.getElementById('motivosData');
+    if (!motivosData) {
+        console.error('No se encontró el contenedor de motivos');
+        return;
+    }
+
+    try {
+        const motivos = JSON.parse(motivosData.dataset.motivos);
+        const motivosFiltrados = motivos.filter(m => m.id_categoria == categoriaId);
+
+        if (motivosFiltrados.length === 0) {
+            console.log('No hay motivos para esta categoría');
+            return;
+        }
+
+        motivosFiltrados.forEach(motivo => {
+            const option = document.createElement('option');
+            option.value = motivo.id_motivo;
+            option.textContent = motivo.nombre;
+            if (motivoSeleccionado && motivo.id_motivo == motivoSeleccionado) {
+                option.selected = true;
+            }
+            motivosSelect.appendChild(option);
+        });
+
+        motivosSelect.disabled = false;
+    } catch (error) {
+        console.error('Error al procesar motivos:', error);
     }
 }
 
@@ -314,7 +346,20 @@ async function actualizarGestionMedicamento(codigo, datos) {
             body: JSON.stringify(datos)
         });
 
-        if (!response.ok) throw new Error('Error al actualizar');
+        const result = await response.json();
+
+        if (!response.ok) {
+            if (result.isAlreadyManaged) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Medicamento en gestión',
+                    text: `Este medicamento está siendo gestionado por ${result.managedBy}`,
+                    confirmButtonColor: '#00549F'
+                });
+                return;
+            }
+            throw new Error(result.error || 'Error al actualizar');
+        }
 
         await Swal.fire({
             icon: 'success',
@@ -330,7 +375,7 @@ async function actualizarGestionMedicamento(codigo, datos) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al actualizar el medicamento',
+            text: error.message || 'Error al actualizar el medicamento',
             confirmButtonColor: '#00549F'
         });
     }
