@@ -98,3 +98,6 @@ INSERT INTO motivos_descuadre (nombre, descripcion, id_categoria) VALUES
 
 -- 5. Reactivar restricciones de clave foránea
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+
