@@ -1056,6 +1056,31 @@ body {
 }
 
 /* New styles for uploaded files */
+.uploaded-files {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.uploaded-files .file-detail {
+  padding: 1rem;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  margin-bottom: 0.5rem;
+}
+
+.uploaded-files .file-detail.has-invalid {
+  border-left: 3px solid #ffc107;
+}
+
+.uploaded-files .file-detail.has-warning {
+  border-left-color: #ffc107;
+  background-color: #fff8e6;
+}
+
+.uploaded-files .file-detail.has-warning .text-warning {
+  color: #b78103 !important;
+}
+
 .uploaded-files .file-detail {
   padding: 1rem;
   border-radius: 4px;
@@ -1069,61 +1094,28 @@ body {
   background-color: #fff8e6;
 }
 
-.invalid-medicines {
-  padding: 0.5rem;
-  background-color: rgba(255, 193, 7, 0.1);
-  border-radius: 4px;
-}
-
-.invalid-medicines ul {
-  margin: 0;
-  padding-left: 1.2rem;
-}
-
-.file-detail.has-warning {
-  border-left-color: #ffc107;
-  background-color: #fff8e6;
-}
-
-.file-detail.has-warning .text-warning {
-  color: #b78103 !important;
-}
-
-.file-detail {
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  background-color: #f8f9fa;
-  border-left: 4px solid #198754;
-}
-
-.file-detail.has-invalid {
-  border-left-color: #ffc107;
-  background-color: #fff8e6;
-}
-
-.file-detail .btn-link {
+.uploaded-files .file-detail .btn-link {
   text-decoration: none;
 }
 
-.file-detail .btn-link:hover {
+.uploaded-files .file-detail .btn-link:hover {
   text-decoration: underline;
 }
 
-.text-decoration-line-through {
+.uploaded-files .text-decoration-line-through {
   text-decoration: line-through;
   color: #6c757d;
 }
 
-.bi-check-circle-fill.text-success {
+.uploaded-files .bi-check-circle-fill.text-success {
   color: #28a745 !important;
 }
 
-.bi-person-check-fill.text-info {
+.uploaded-files .bi-person-check-fill.text-info {
   color: #17a2b8 !important;
 }
 
-.selected-files-preview {
+.uploaded-files .selected-files-preview {
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 1rem;
@@ -1132,7 +1124,7 @@ body {
   text-align: center;
 }
 
-.file-count-badge {
+.uploaded-files .file-count-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
@@ -1143,24 +1135,24 @@ body {
   animation: fileCountPulse 0.3s ease;
 }
 
-.file-count-badge i {
+.uploaded-files .file-count-badge i {
   font-size: 1.5rem;
   color: #217346;
 }
 
-.file-count {
+.uploaded-files .file-count {
   font-size: 1.25rem;
   font-weight: 600;
   color: #00549f;
 }
 
-.file-text {
+.uploaded-files .file-text {
   color: #6c757d;
   font-size: 0.95rem;
 }
 
 /* Hover effect */
-.selected-files-preview:hover {
+.uploaded-files .selected-files-preview:hover {
   border-color: #00549f;
   background-color: #f1f3f5;
   transition: all 0.2s ease;
@@ -1177,6 +1169,14 @@ body {
   100% {
     transform: scale(1);
   }
+}
+
+.view-details {
+  text-decoration: none !important;
+}
+
+.view-details:hover {
+  color: #dc3545 !important;
 }
 
 /* Estilos para los modales superpuestos */
@@ -1214,7 +1214,55 @@ body {
 .animate__fadeIn {
     animation: fadeIn 0.3s ease;
 }
+/* Navbar improvements */
+.navbar {
+    background-color: #00549f;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
+.navbar-title {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-left: 1rem;
+}
+
+.navbar-title small {
+    opacity: 0.8;
+    font-weight: normal;
+}
+
+.nav-user-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.nav-user-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* File upload improvements */
+.file-detail {
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.file-detail:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.uploaded-files {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
 .animate__fadeOut {
     animation: fadeOut 0.3s ease;
 }

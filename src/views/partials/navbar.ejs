@@ -1,9 +1,12 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
-        <div class="navbar-brand-container d-lg-none">
-            <a class="navbar-brand" href="/dashboard">
-                <img src="/public/img/logo.png" alt="APD Logo" class="navbar-logo" />
-            </a>
+        <div class="d-flex align-items-center">
+            <h1 class="navbar-title mb-0">
+                <%= title %>
+                <% if (active === 'dashboard') { %>
+                    <!-- <small class="d-block text-light-50 fs-6">Bienvenido, <%= user.nombre %></small> -->
+                <% } %>
+            </h1>
         </div>
         
         <div class="ms-auto">
@@ -45,14 +48,14 @@
 <div class="sidebar">
     <div class="sidebar-header">
         <a class="navbar-brand" href="/dashboard">
-            <img src="/public/img/logo.png" alt="APD Logo" class="sidebar-logo" />
+            <img src="/public/img/logo_claim.png" alt="APD Logo" class="sidebar-logo" />
         </a>
     </div>
     
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
-                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                <i class="bi bi-speedometer2 me-2"></i> Inicio
             </a>
         </li>
         <li class="nav-item">

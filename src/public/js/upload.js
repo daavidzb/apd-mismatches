@@ -22,101 +22,96 @@ document.addEventListener('DOMContentLoaded', function() {
 
     uploadForm.addEventListener('submit', async function(event) {
         event.preventDefault();
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
         
-        Swal.fire({
-            title: 'Procesando...',
-            text: 'Por favor espere mientras se procesan los archivos',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
         try {
             const formData = new FormData(this);
             const response = await fetch('/upload-files', {
                 method: 'POST',
                 body: formData
             });
+            
             const result = await response.json();
-
+            
             if (response.ok) {
-                const totalArchivos = result.results.length;
-                const totalMedicamentos = result.results.reduce((sum, file) => sum + file.medicamentosValidos, 0);
-                const totalOmitidos = result.results.filter(f => f.medicamentosInvalidos?.length > 0).length;
-
-                // Modal principal con resumen
+                const duplicatedFiles = result.results.filter(f => f.error && f.razon === "Ya existe un reporte para esta fecha");
+                const processedFiles = result.results.filter(f => !f.error);
+                
                 await Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
+                    icon: duplicatedFiles.length > 0 ? 'warning' : 'success',
+                    title: duplicatedFiles.length > 0 ? '¡Atención!' : '¡Archivos procesados!',
                     html: `
                         <div class="text-start">
-                            <p><strong>Archivos procesados:</strong> ${totalArchivos}</p>
-                            <p><strong>Total medicamentos válidos:</strong> ${totalMedicamentos}</p>
-                            <p><strong>Archivos con omisiones:</strong> ${totalOmitidos}</p>
+                            ${duplicatedFiles.length > 0 ? `
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Se encontraron ${duplicatedFiles.length} reportes duplicados
+                                </div>
+                            ` : ''}
+                            <p><strong>Archivos procesados:</strong> ${processedFiles.length}</p>
                             <hr>
                             <div class="uploaded-files">
                                 ${result.results.map(file => `
-                                    <div class="file-detail ${file.medicamentosInvalidos?.length > 0 ? 'has-invalid' : ''}">
-                                        <p class="mb-1 d-flex justify-content-between align-items-center">
+                                    <div class="file-detail ${file.error ? 'border-start border-4 border-warning bg-light' : ''}">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
                                             <strong>${file.filename}</strong>
-                                            ${file.medicamentosInvalidos?.length > 0 ? 
-                                                `<button class="btn btn-link btn-sm text-warning p-0 view-details" 
-                                                    data-filename="${file.filename}"
-                                                    data-fileinfo='${JSON.stringify(file)}'>
+                                            ${file.error ? 
+                                                `<span class="badge bg-warning">
                                                     <i class="bi bi-exclamation-triangle-fill"></i>
-                                                    Ver ${file.medicamentosInvalidos.length} omisiones
-                                                </button>` 
-                                                : ''}
-                                        </p>
-                                        <p class="mb-0 small">Medicamentos válidos: ${file.medicamentosValidos}</p>
-                                        <p class="mb-0 small text-muted">Fecha: ${new Date(file.fecha).toLocaleString()}</p>
+                                                    Duplicado
+                                                </span>` : 
+                                                `<span class="badge bg-success">
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                    Procesado
+                                                </span>`
+                                            }
+                                        </div>
+                                        ${file.error ? 
+                                            `<div class="small text-warning">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                ${file.detalles}
+                                            </div>` :
+                                            `<div class="small text-muted">
+                                                Medicamentos procesados: ${file.medicamentosValidos}
+                                            </div>`
+                                        }
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
                     `,
                     width: '600px',
-                    confirmButtonColor: '#00549F',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        // Agregar listeners para los botones de ver detalles
-                        document.querySelectorAll('.view-details').forEach(button => {
-                            button.addEventListener('click', (e) => {
-                                e.preventDefault();
-                                const fileData = JSON.parse(button.dataset.fileinfo);
-                                showFileDetails(button.dataset.filename, fileData);
-                            });
-                        });
-                    }
+                    confirmButtonColor: '#00549F'
                 });
-
-                this.reset();
-                fileListDiv.innerHTML = '';
-            } else {
-                throw new Error(result.error || 'Error al procesar los archivos');
             }
         } catch (error) {
+            console.error('Error:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message,
+                text: 'Error al procesar los archivos',
                 confirmButtonColor: '#00549F'
             });
+        } finally {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-cloud-upload"></i> Subir archivos';
+            this.reset();
         }
     });
 });
 
 // Función para mostrar detalles de un archivo
 function showFileDetails(filename, fileData) {
-    // Modal secundario para mostrar detalles
+    // Modal secundario para detalles
     Swal.fire({
         title: `Detalles de ${filename}`,
         html: `
             <div class="text-start">
                 <h6 class="mb-3">Medicamentos no válidos:</h6>
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                    <table class="table table-sm">
+                    <table class="table table-sm table-hover">
                         <thead>
                             <tr>
                                 <th>Código</th>
@@ -147,11 +142,11 @@ function showFileDetails(filename, fileData) {
         confirmButtonText: 'Cerrar',
         confirmButtonColor: '#00549F',
         didOpen: () => {
-            // Configurar que este modal se muestre sobre el modal principal
+            // Asegurar que este modal aparezca sobre el principal
             Swal.getPopup().style.zIndex = 1500;
         }
     }).then(() => {
-        // Al cerrar el modal de detalles, nos aseguramos que el modal principal siga visible
+        // Al cerrar el modal de detalles, aseguramos que el modal principal siga visible
         const mainModal = document.querySelector('.swal2-container');
         if (mainModal) {
             mainModal.style.display = 'flex';
