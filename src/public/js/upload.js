@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitButton = this.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
-        
+
         try {
             const formData = new FormData(this);
             const response = await fetch('/upload-files', {
@@ -36,8 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             
             if (response.ok) {
-                const duplicatedFiles = result.results.filter(f => f.error && f.razon === "Ya existe un reporte para esta fecha");
-                const processedFiles = result.results.filter(f => !f.error);
+                const duplicatedFiles = result.results.filter(f => f.error && f.razon === "Reporte duplicado");
+                const validFiles = result.results.filter(f => !f.error);
                 
                 await Swal.fire({
                     icon: duplicatedFiles.length > 0 ? 'warning' : 'success',
@@ -45,38 +45,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     html: `
                         <div class="text-start">
                             ${duplicatedFiles.length > 0 ? `
-                                <div class="alert alert-warning">
+                                <div class="alert alert-danger">
                                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                                     Se encontraron ${duplicatedFiles.length} reportes duplicados
                                 </div>
                             ` : ''}
-                            <p><strong>Archivos procesados:</strong> ${processedFiles.length}</p>
+                            <p><strong>Archivos procesados:</strong> ${validFiles.length}</p>
                             <hr>
                             <div class="uploaded-files">
                                 ${result.results.map(file => `
-                                    <div class="file-detail ${file.error ? 'border-start border-4 border-warning bg-light' : ''}">
+                                    <div class="file-detail ${getFileDetailClass(file)}">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <strong>${file.filename}</strong>
-                                            ${file.error ? 
-                                                `<span class="badge bg-warning">
-                                                    <i class="bi bi-exclamation-triangle-fill"></i>
-                                                    Duplicado
-                                                </span>` : 
-                                                `<span class="badge bg-success">
-                                                    <i class="bi bi-check-circle-fill"></i>
-                                                    Procesado
-                                                </span>`
-                                            }
+                                            ${getStatusBadge(file)}
                                         </div>
-                                        ${file.error ? 
-                                            `<div class="small text-warning">
-                                                <i class="bi bi-info-circle me-1"></i>
-                                                ${file.detalles}
-                                            </div>` :
-                                            `<div class="small text-muted">
-                                                Medicamentos procesados: ${file.medicamentosValidos}
-                                            </div>`
-                                        }
+                                        <div class="small ${file.error ? 'text-danger' : 'text-muted'}">
+                                            ${getFileDetails(file)}
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -100,6 +85,45 @@ document.addEventListener('DOMContentLoaded', function() {
             this.reset();
         }
     });
+
+    // Helper functions
+    function getFileDetailClass(file) {
+        if (file.error) return 'border-start border-4 border-danger bg-light';
+        if (file.medicamentosValidos === 0) return 'border-start border-4 border-warning bg-light';
+        return '';
+    }
+
+    function getStatusBadge(file) {
+        if (file.error) {
+            return `
+                <span class="badge bg-danger">
+                    <i class="bi bi-x-circle-fill"></i>
+                    Error
+                </span>`;
+        }
+        if (file.medicamentosValidos === 0) {
+            return `
+                <span class="badge bg-warning">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    No procesado
+                </span>`;
+        }
+        return `
+            <span class="badge bg-success">
+                <i class="bi bi-check-circle-fill"></i>
+                Procesado
+            </span>`;
+    }
+
+    function getFileDetails(file) {
+        if (file.error) {
+            return `<i class="bi bi-info-circle me-1"></i>${file.razon}: ${file.detalles}`;
+        }
+        if (file.medicamentosValidos === 0) {
+            return `<i class="bi bi-info-circle me-1"></i>No se encontraron medicamentos válidos para procesar`;
+        }
+        return `Medicamentos procesados: ${file.medicamentosValidos}`;
+    }
 });
 
 // Función para mostrar detalles de un archivo

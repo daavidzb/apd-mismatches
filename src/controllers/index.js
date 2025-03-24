@@ -319,10 +319,7 @@ const upload_excel = async (req, res) => {
       fileFilter: (req, file, callback) => {
         let ext = path.extname(file.originalname);
         if (ext !== ".xlsx" && ext !== ".xls") {
-          return callback(
-            new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"),
-            false
-          );
+          return callback(new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"), false);
         }
         callback(null, true);
       },
@@ -335,58 +332,45 @@ const upload_excel = async (req, res) => {
       }
 
       const results = [];
+      
       for (const file of req.files) {
         try {
           // Extraer fecha del nombre del archivo
-          const dateMatch = file.originalname.match(
-            /APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/
-          );
+          const dateMatch = file.originalname.match(/APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/);
           if (!dateMatch) {
             results.push({
               filename: file.originalname,
               error: true,
-              razon: "Formato de nombre de archivo inválido",
-              detalles:
-                "El nombre debe seguir el formato: APD_descuadrado_YYYY_MM_DD",
+              razon: "Formato de nombre inválido"
             });
             continue;
           }
 
-          const reportDate = new Date(
-            dateMatch[1],
-            parseInt(dateMatch[2]) - 1,
-            dateMatch[3]
-          );
+          const reportDate = new Date(dateMatch[1], parseInt(dateMatch[2]) - 1, dateMatch[3]);
 
-          // Verificar si ya existe un reporte para esta fecha
+          // Verificar reporte existente
           const existingReport = await new Promise((resolve, reject) => {
             connection.query(
-              "SELECT id_reporte, total_descuadres FROM reportes WHERE DATE(fecha_reporte) = DATE(?)",
+              "SELECT id_reporte FROM reportes WHERE DATE(fecha_reporte) = DATE(?)",
               [reportDate],
               (error, results) => {
-                if (error) {
-                  reject(error);
-                  return;
-                }
-                resolve(results);
+                if (error) reject(error);
+                resolve(results[0]);
               }
             );
           });
 
-          if (existingReport && existingReport.length > 0) {
+          if (existingReport) {
             results.push({
               filename: file.originalname,
               error: true,
-              razon: "Ya existe un reporte para esta fecha",
-              detalles: `Reporte existente del ${reportDate.toLocaleDateString(
-                "es-ES"
-              )}`,
-              fecha: reportDate,
+              razon: "Reporte duplicado",
+              detalles: `Ya existe un reporte para la fecha ${reportDate.toLocaleDateString()}`
             });
             continue;
           }
 
-          // Procesar el archivo
+          // Procesar el archivo usando el método que funciona
           const workbook = xlsx.readFile(file.path);
           const sheet_name_list = workbook.SheetNames;
           const rawData = xlsx.utils.sheet_to_json(
@@ -398,33 +382,99 @@ const upload_excel = async (req, res) => {
             }
           );
 
-          // ... resto del procesamiento del archivo ...
+          const processedData = rawData
+            .filter((row) => row.length > 0)
+            .map((rowValues) => {
+              const firstCell = rowValues[0]?.toString().trim() || "";
+              if (firstCell === "Almacen=") {
+                if (
+                  rowValues[5]?.toString().trim() === "No existe" ||
+                  rowValues[7]?.toString().trim() === "No existe"
+                ) {
+                  return {
+                    isInvalid: true,
+                    codigo: rowValues[2]?.toString().trim().replace(/^0+/, "") || "",
+                    descripcion: rowValues[3]?.toString().trim() || "",
+                    razon: `${rowValues[7]?.toString().trim() === "No existe" ? "APD" : "FarmaTools"} no existe`
+                  };
+                }
+
+                const farmatools = parseInt(rowValues[5]?.toString().replace("FarmaTools=", "")) || 0;
+                const armarioAPD = parseInt(rowValues[7]?.toString().replace("Armario_APD=", "")) || 0;
+                const diferencia = farmatools - armarioAPD;
+                const codigoMed = rowValues[2]?.toString().trim().replace(/^0+/, "") || "";
+
+                return {
+                  isInvalid: false,
+                  num_almacen: parseInt(rowValues[1]?.toString().trim()) || 0,
+                  codigo_med: codigoMed,
+                  descripcion: rowValues[3]?.toString().trim() || "",
+                  cantidad_farmatools: farmatools,
+                  cantidad_armario_apd: armarioAPD,
+                  descuadre: diferencia,
+                };
+              }
+              return null;
+            })
+            .filter((item) => item !== null);
+
+          const validMedicines = processedData.filter(item => !item.isInvalid);
+          const invalidMedicines = processedData.filter(item => item.isInvalid);
+
+          // Insertar reporte
+          const reportResult = await new Promise((resolve, reject) => {
+            connection.query(
+              "INSERT INTO reportes (fecha_reporte, nombre_archivo, total_descuadres) VALUES (?, ?, ?)",
+              [reportDate, file.originalname, validMedicines.length],
+              (error, result) => {
+                if (error) reject(error);
+                resolve(result);
+              }
+            );
+          });
+
+          // Insertar descuadres
+          if (validMedicines.length > 0) {
+            await new Promise((resolve, reject) => {
+              connection.query(
+                "INSERT INTO descuadres (id_reporte, num_almacen, codigo_med, descripcion, cantidad_farmatools, cantidad_armario_apd, descuadre) VALUES ?",
+                [validMedicines.map(item => [
+                  reportResult.insertId,
+                  item.num_almacen,
+                  item.codigo_med,
+                  item.descripcion,
+                  item.cantidad_farmatools,
+                  item.cantidad_armario_apd,
+                  item.descuadre
+                ])],
+                (error) => {
+                  if (error) reject(error);
+                  resolve();
+                }
+              );
+            });
+          }
 
           results.push({
             filename: file.originalname,
             fecha: reportDate,
-            totalMedicamentos: processedData.length,
-            medicamentosValidos: validMedicines.length,
-            medicamentosInvalidos: invalidMedicines,
             procesado: true,
+            medicamentosValidos: validMedicines.length,
+            medicamentosInvalidos: invalidMedicines
           });
+
         } catch (error) {
           console.error(`Error processing file ${file.originalname}:`, error);
           results.push({
             filename: file.originalname,
             error: true,
-            razon: error.message,
+            razon: "Error al procesar el archivo",
+            detalles: error.message
           });
         }
       }
 
-      res.json({
-        success: true,
-        results: results.map((result) => ({
-          ...result,
-          fecha: result.fecha ? result.fecha.toLocaleDateString("es-ES") : null,
-        })),
-      });
+      res.json({ success: true, results });
     });
   } catch (error) {
     console.error("Error:", error);

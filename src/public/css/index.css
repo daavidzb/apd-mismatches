@@ -1258,6 +1258,15 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+.file-detail .badge {
+    font-weight: normal;
+    padding: 0.5rem 0.75rem;
+}
+
+.file-detail .text-danger {
+    color: #dc3545 !important;
+}
+
 .uploaded-files {
     max-height: 400px;
     overflow-y: auto;
