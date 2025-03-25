@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) throw new Error('Error al obtener datos');
             const data = await response.json();
 
+            // Modificar la configuración de la tabla
             dataTable = new DataTable('#analysisTable', {
                 data: data.analysis,
                 language: dataTableEsES,
@@ -43,53 +44,56 @@ document.addEventListener('DOMContentLoaded', function() {
                         data: 'descripcion', 
                         title: 'Descripción',
                         render: function(data, type, row) {
-                            const hasChanges = row.tiene_cambios_tendencia ?
-                                '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : '';
-                            
-                            let statusBadge = '';
-                            if (row.estado_gestion === 'Pendiente') {
-                                statusBadge = '<span class="badge bg-danger ms-2">Pendiente</span>';
-                            } else if (row.estado_gestion === 'En proceso') {
-                                statusBadge = '<span class="badge bg-warning ms-2">En proceso</span>';
-                            } else if (row.estado_gestion === 'Corregido') {
-                                statusBadge = '<span class="badge bg-success ms-2">Corregido</span>';
+                            if (type === 'display') {
+                                const hasChanges = row.tiene_cambios_tendencia ?
+                                    `<i class="bi bi-exclamation-triangle-fill text-warning ms-2" 
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="right" 
+                                        title="Este medicamento presenta cambios significativos"></i>` : '';
+                                return `<span>${data}</span>${hasChanges}`;
                             }
-
-                            return `
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <span>${data}</span>
-                                    <div>
-                                        ${hasChanges}
-                                        ${statusBadge}
-                                    </div>
-                                </div>`;
+                            return data;
                         }
                     },
                     { 
-                        data: null,
-                        title: 'Stock Actual',
+                        data: 'ultimo_descuadre',
+                        title: 'Diferencia',
+                        className: 'text-end',
                         render: function(data) {
-                            return `
-                                <div>
-                                    <div>FarmaTools: ${data.ultima_cantidad_farmatools}</div>
-                                    <div>APD: ${data.ultima_cantidad_armario_apd}</div>
-                                    <div class="${data.ultimo_descuadre < 0 ? 'text-danger' : 'text-success'}">
-                                        <strong>Diferencia: ${data.ultimo_descuadre}</strong>
-                                    </div>
-                                </div>`;
+                            const colorClass = data < 0 ? 'text-danger' : 'text-success';
+                            return `<strong class="${colorClass}">${data}</strong>`;
                         }
                     },
-                    { 
-                        data: 'moda',
-                        title: 'Moda',
+                    {
+                        data: 'estado_gestion',
+                        title: 'Estado',
+                        className: 'text-center',
                         render: function(data) {
-                            return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data}</span>`;
+                            let badgeClass = 'bg-secondary';
+                            let tooltipText = '';
+                            
+                            if (data === 'Pendiente') {
+                                badgeClass = 'bg-danger';
+                                tooltipText = 'Este medicamento está pendiente de gestión';
+                            } else if (data === 'En proceso') {
+                                badgeClass = 'bg-warning';
+                                tooltipText = 'Este medicamento está siendo gestionado';
+                            } else if (data === 'Corregido') {
+                                badgeClass = 'bg-success';
+                                tooltipText = 'Este medicamento ha sido corregido';
+                            }
+                            
+                            return `<span class="badge ${badgeClass}" 
+                                          data-bs-toggle="tooltip" 
+                                          data-bs-placement="top" 
+                                          title="${tooltipText}">${data}</span>`;
                         }
                     },
                     {
                         data: null,
                         title: 'Acciones',
                         className: 'text-center',
+                        orderable: false,
                         render: function(data) {
                             return `
                                 <div class="btn-group">
@@ -108,11 +112,96 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 ],
-                responsive: true,
-                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+                order: [[1, 'asc']],
+                dom: '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"row mb-3"<"col-12 text-center"<"filter-buttons">>><"row"<"col-12"t>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                drawCallback: function() {
+                    // Inicializar tooltips de Bootstrap
+                    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    tooltips.forEach(tooltip => {
+                        new bootstrap.Tooltip(tooltip);
+                    });
+                },
+                initComplete: function() {
+                    // Agregar botones de filtro
+                    const filterButtons = $('.filter-buttons');
+                    filterButtons.html(`
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary filter-all active" 
+                                    title="Mostrar todos los registros">
+                                <i class="bi bi-grid-3x3"></i> Todos
+                            </button>
+                            <button type="button" class="btn btn-outline-warning filter-changes" 
+                                    title="Mostrar solo medicamentos con cambios significativos">
+                                <i class="bi bi-exclamation-triangle"></i> Cambios significativos
+                            </button>
+                            <button type="button" class="btn btn-outline-info filter-week" 
+                                    title="Mostrar descuadres de la última semana">
+                                <i class="bi bi-calendar-week"></i> Última semana
+                            </button>
+                            <button type="button" class="btn btn-outline-danger filter-pending" 
+                                    title="Mostrar medicamentos pendientes">
+                                <i class="bi bi-clock-history"></i> Pendientes
+                            </button>
+                        </div>
+                    `);
+
+                    // Event listeners para los filtros
+                    $('.filter-all').on('click', function() {
+                        $.fn.dataTable.ext.search = [];
+                        dataTable.draw();
+                    });
+
+                    $('.filter-changes').on('click', function() {
+                        $.fn.dataTable.ext.search = [
+                            function(settings, searchData, index) {
+                                const row = dataTable.row(index).data();
+                                return row && row.tiene_cambios_tendencia;
+                            }
+                        ];
+                        dataTable.draw();
+                    });
+
+                    $('.filter-week').on('click', function() {
+                        $.fn.dataTable.ext.search = [
+                            function(settings, data, dataIndex) {
+                                const row = dataTable.row(dataIndex).data();
+                                if (!row || !row.fecha_ultimo_descuadre) return false;
+                                const oneWeekAgo = new Date();
+                                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                                const fecha = new Date(row.fecha_ultimo_descuadre);
+                                return fecha >= oneWeekAgo;
+                            }
+                        ];
+                        dataTable.draw();
+                    });
+
+                    $('.filter-pending').on('click', function() {
+                        $.fn.dataTable.ext.search = [
+                            function(settings, searchData, index) {
+                                return searchData[3].includes('Pendiente');
+                            }
+                        ];
+                        dataTable.draw();
+                    });
+
+                    // Agregar estados activos a los botones y tooltips
+                    const filterBtns = $('.filter-buttons button');
+                    filterBtns.on('click', function() {
+                        filterBtns.removeClass('active');
+                        $(this).addClass('active');
+                    });
+
+                    // Inicializar tooltips para los botones
+                    filterBtns.each(function() {
+                        new bootstrap.Tooltip(this, {
+                            placement: 'top',
+                            trigger: 'hover'
+                        });
+                    });
+                }
             });
 
-            // Eventos de los botones
+            // Event listeners para los botones
             $('#analysisTable').on('click', '.ver-detalle', function() {
                 const codigo = $(this).data('codigo');
                 showMedicineDetails(codigo, month);
@@ -154,7 +243,7 @@ function getLastTwelveMonths() {
     return months;
 }
 
-// Función para mostrar detalles
+// Modificar la función showMedicineDetails para medicamentos con cambios significativos
 async function showMedicineDetails(codigo, month) {
     try {
         const response = await fetch(`/api/analysis/detail/${month}/${codigo}`);
@@ -162,6 +251,13 @@ async function showMedicineDetails(codigo, month) {
         
         const data = await response.json();
         
+        // Preparar los datos para la gráfica
+        const chartData = data.details.map(detail => ({
+            x: new Date(detail.fecha).getTime(),
+            y: detail.descuadre,
+            cambio: detail.cambio_tendencia
+        }));
+
         Swal.fire({
             title: `<i class="bi bi-capsule me-2"></i>${data.medicina.descripcion}`,
             html: `
@@ -169,19 +265,24 @@ async function showMedicineDetails(codigo, month) {
                     <div class="text-muted mb-2">
                         <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
                     </div>
-                    <div class="table-responsive">
+                    <div class="table-responsive mb-4">
                         <table class="table table-sm">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
-                                    <th>Descuadre</th>
+                                    <th class="text-end">Descuadre</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${data.details.map(detail => `
                                     <tr class="${detail.cambio_tendencia ? 'table-warning' : ''}">
-                                        <td>${new Date(detail.fecha).toLocaleDateString('es-ES')}</td>
-                                        <td class="${detail.descuadre < 0 ? 'text-danger' : 'text-success'}">
+                                        <td>
+                                            ${detail.cambio_tendencia ? 
+                                                '<i class="bi bi-exclamation-triangle-fill text-warning me-2" title="Cambio significativo"></i>' : 
+                                                '<i class="bi bi-dot me-2"></i>'}
+                                            ${new Date(detail.fecha).toLocaleDateString('es-ES')}
+                                        </td>
+                                        <td class="text-end ${detail.descuadre < 0 ? 'text-danger' : 'text-success'}">
                                             <strong>${detail.descuadre}</strong>
                                         </td>
                                     </tr>
@@ -189,9 +290,66 @@ async function showMedicineDetails(codigo, month) {
                             </tbody>
                         </table>
                     </div>
+                    <div id="descuadresChart" style="height: 300px;"></div>
                 </div>
             `,
             width: '600px',
+            didOpen: () => {
+                // Inicializar gráfica de evolución con diseño mejorado
+                const chart = new ApexCharts(document.querySelector("#descuadresChart"), {
+                    series: [{
+                        name: 'Descuadre',
+                        data: chartData
+                    }],
+                    chart: {
+                        type: 'line',
+                        height: 300,
+                        animations: {
+                            enabled: true,
+                            easing: 'easeinout'
+                        }
+                    },
+                    markers: {
+                        size: 6,
+                        colors: chartData.map(point => point.cambio ? '#ffc107' : '#00549F'),
+                        strokeWidth: 0
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 3
+                    },
+                    xaxis: {
+                        type: 'datetime',
+                        labels: {
+                            datetimeFormatter: {
+                                year: 'yyyy',
+                                month: 'MMM yyyy',
+                                day: 'dd MMM'
+                            }
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Unidades'
+                        }
+                    },
+                    tooltip: {
+                        x: {
+                            format: 'dd MMM yyyy'
+                        },
+                        y: {
+                            title: {
+                                formatter: () => 'Descuadre:'
+                            }
+                        }
+                    },
+                    grid: {
+                        borderColor: '#f1f1f1'
+                    }
+                });
+                
+                chart.render();
+            },
             confirmButtonColor: '#00549F'
         });
     } catch (error) {

@@ -506,25 +506,11 @@ const get_analysis = async (req, res) => {
     }
 
     const query = `
-      WITH DailyChanges AS (
-          SELECT 
-              d.codigo_med,
-              d.descripcion,
-              d.descuadre,
-              DATE(r.fecha_reporte) as fecha,
-              d.cantidad_farmatools,
-              d.cantidad_armario_apd,
-              LAG(d.descuadre) OVER (PARTITION BY d.codigo_med ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
-          FROM descuadres d
-          JOIN reportes r ON d.id_reporte = r.id_reporte
-          WHERE d.descuadre != 0 ${filterClause}
-      ),
-      LastDescuadre AS (
+      WITH LastDescuadre AS (
           SELECT
               d.codigo_med,
+              d.descripcion,
               d.descuadre as ultimo_descuadre,
-              d.cantidad_farmatools,
-              d.cantidad_armario_apd,
               r.fecha_reporte
           FROM descuadres d
           JOIN reportes r ON d.id_reporte = r.id_reporte
@@ -536,24 +522,6 @@ const get_analysis = async (req, res) => {
               JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
               ${month !== "all" ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}` : ''}
               GROUP BY d2.codigo_med
-          )
-      ),
-      ModaCalculation AS (
-          SELECT
-              d.codigo_med,
-              d.descuadre as moda
-          FROM descuadres d
-          JOIN reportes r ON d.id_reporte = r.id_reporte
-          ${month !== "all" ? `WHERE YEAR(r.fecha_reporte) = ${year} AND MONTH(r.fecha_reporte) = ${m}` : ''}
-          GROUP BY d.codigo_med, d.descuadre
-          HAVING COUNT(*) = (
-              SELECT COUNT(*)
-              FROM descuadres d2
-              JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
-              WHERE d2.codigo_med = d.codigo_med
-              GROUP BY d2.descuadre
-              ORDER BY COUNT(*) DESC
-              LIMIT 1
           )
       ),
       GestionInfo AS (
@@ -579,31 +547,23 @@ const get_analysis = async (req, res) => {
       )
       SELECT DISTINCT
           ld.codigo_med,
-          d.descripcion,
+          ld.descripcion,
           ld.ultimo_descuadre,
-          ld.cantidad_farmatools as ultima_cantidad_farmatools,
-          ld.cantidad_armario_apd as ultima_cantidad_armario_apd,
-          mc.moda,
-          CASE WHEN COUNT(DISTINCT dc.descuadre) > 1 THEN 1 ELSE 0 END as tiene_cambios_tendencia,
+          CASE WHEN COUNT(DISTINCT d.descuadre) > 1 THEN 1 ELSE 0 END as tiene_cambios_tendencia,
           COALESCE(gi.gestionado_por, NULL) as gestionado_por,
           COALESCE(gi.estado_gestion, 'Pendiente') as estado_gestion,
           COALESCE(gi.fecha_gestion, NULL) as fecha_gestion
       FROM LastDescuadre ld
-      JOIN descuadres d ON ld.codigo_med = d.codigo_med
-      LEFT JOIN DailyChanges dc ON d.codigo_med = dc.codigo_med
-      LEFT JOIN ModaCalculation mc ON d.codigo_med = mc.codigo_med
-      LEFT JOIN GestionInfo gi ON d.codigo_med = gi.codigo_med
+      LEFT JOIN descuadres d ON ld.codigo_med = d.codigo_med
+      LEFT JOIN GestionInfo gi ON ld.codigo_med = gi.codigo_med
       GROUP BY 
           ld.codigo_med, 
-          d.descripcion, 
-          ld.ultimo_descuadre, 
-          ld.cantidad_farmatools,
-          ld.cantidad_armario_apd, 
-          mc.moda, 
+          ld.descripcion, 
+          ld.ultimo_descuadre,
           gi.gestionado_por, 
           gi.estado_gestion, 
           gi.fecha_gestion
-      ORDER BY d.descripcion`;
+      ORDER BY ld.descripcion`;
 
     connection.query(query, [], (error, results) => {
       if (error) {

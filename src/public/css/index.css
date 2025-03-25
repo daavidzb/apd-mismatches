@@ -1352,3 +1352,32 @@ body {
 .dropdown-menu[data-bs-popper] {
     z-index: 1050;
 }
+
+#loader {
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.spinner-border {
+    animation-duration: 1s;
+}
+
+/* Mejoras visuales para la tabla */
+.dataTables_wrapper .row {
+    margin-bottom: 1rem;
+}
+
+.badge {
+    font-weight: normal;
+    padding: 0.5em 0.8em;
+}
+
+.loader-content {
+    text-align: center;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    color: #00549F;
+}
