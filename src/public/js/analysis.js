@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let dataTable = null;
 
     // Poblar selector de meses
+    const option = document.createElement('option');
+    option.value = 'all';
+    option.textContent = 'Todos los períodos';
+    analysisMonth.appendChild(option);
+
     months.forEach(month => {
         const option = document.createElement('option');
         option.value = month.value;
@@ -31,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             dataTable = new DataTable('#analysisTable', {
                 data: data.analysis,
+                language: dataTableEsES,
                 columns: [
                     { data: 'codigo_med', title: 'Código' },
                     { 
@@ -40,29 +46,37 @@ document.addEventListener('DOMContentLoaded', function() {
                             const hasChanges = row.tiene_cambios_tendencia ?
                                 '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="Presenta cambios significativos"></i>' : '';
                             
-                            let statusIcon = '';
-                            if (row.estado_gestion === 'Corregido') {
-                                statusIcon = `<i class="bi bi-check-circle-fill text-success ms-2" 
-                                               title="Corregido el ${new Date(row.fecha_gestion).toLocaleString('es-ES')}"></i>`;
-                            } else if (row.gestionado_por) {
-                                statusIcon = `<i class="bi bi-person-check-fill text-info ms-2" 
-                                               title="En gestión por: ${row.gestionado_por}"></i>`;
+                            let statusBadge = '';
+                            if (row.estado_gestion === 'Pendiente') {
+                                statusBadge = '<span class="badge bg-danger ms-2">Pendiente</span>';
+                            } else if (row.estado_gestion === 'En proceso') {
+                                statusBadge = '<span class="badge bg-warning ms-2">En proceso</span>';
+                            } else if (row.estado_gestion === 'Corregido') {
+                                statusBadge = '<span class="badge bg-success ms-2">Corregido</span>';
                             }
 
-                            return `<div class="d-flex align-items-center justify-content-between">
-                                <span class="${row.estado_gestion === 'Corregido' ? 'text-decoration-line-through' : ''}">${data}</span>
-                                <div>
-                                    ${hasChanges}
-                                    ${statusIcon}
-                                </div>
-                            </div>`;
+                            return `
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>${data}</span>
+                                    <div>
+                                        ${hasChanges}
+                                        ${statusBadge}
+                                    </div>
+                                </div>`;
                         }
                     },
                     { 
-                        data: 'ultimo_descuadre',
-                        title: 'Último Descuadre',
+                        data: null,
+                        title: 'Stock Actual',
                         render: function(data) {
-                            return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data}</span>`;
+                            return `
+                                <div>
+                                    <div>FarmaTools: ${data.ultima_cantidad_farmatools}</div>
+                                    <div>APD: ${data.ultima_cantidad_armario_apd}</div>
+                                    <div class="${data.ultimo_descuadre < 0 ? 'text-danger' : 'text-success'}">
+                                        <strong>Diferencia: ${data.ultimo_descuadre}</strong>
+                                    </div>
+                                </div>`;
                         }
                     },
                     { 
@@ -94,9 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
-                },
                 responsive: true,
                 dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
             });
@@ -369,7 +380,7 @@ async function actualizarGestionMedicamento(codigo, datos) {
             showConfirmButton: false
         });
 
-        window.location.href = '/managed';
+        window.location.href = '/analysis';
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({
@@ -380,3 +391,28 @@ async function actualizarGestionMedicamento(codigo, datos) {
         });
     }
 }
+
+const dataTableEsES = {
+    "decimal": "",
+    "emptyTable": "No hay datos disponibles",
+    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+    "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+    "infoFiltered": "(filtrado de _MAX_ registros totales)",
+    "infoPostFix": "",
+    "thousands": ",",
+    "lengthMenu": "Mostrar _MENU_ registros",
+    "loadingRecords": "Cargando...",
+    "processing": "Procesando...",
+    "search": "Buscar:",
+    "zeroRecords": "No se encontraron coincidencias",
+    "paginate": {
+        "first": "Primero",
+        "last": "Último",
+        "next": "Siguiente",
+        "previous": "Anterior"
+    },
+    "aria": {
+        "sortAscending": ": activar para ordenar ascendentemente",
+        "sortDescending": ": activar para ordenar descendentemente"
+    }
+};

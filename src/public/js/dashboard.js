@@ -70,35 +70,121 @@ async function initializeStateChart() {
     try {
         const response = await fetch('/api/dashboard/states');
         const data = await response.json();
-
+        
+        // Ordenar los estados en el orden deseado
+        const ordenEstados = ['Pendiente', 'En proceso', 'Corregido'];
+        data.sort((a, b) => ordenEstados.indexOf(a.nombre) - ordenEstados.indexOf(b.nombre));
+        
         const options = {
             series: data.map(item => item.total),
             chart: {
                 type: 'donut',
-                height: 400
+                height: 350
             },
             labels: data.map(item => item.nombre),
-            colors: ['#dc3545', '#ffc107', '#198754'],
+            colors: ['#dc3545', '#ffc107', '#198754'], // Rojo (Pendiente), Naranja (En proceso), Verde (Corregido)
             title: {
                 text: 'Distribución por Estado',
-                align: 'left'
+                align: 'left',
+                style: {
+                    fontSize: '16px'
+                }
             },
-            responsive: [{
-                breakpoint: 480,
-                options: {
-                    chart: {
-                        width: 200
-                    },
-                    legend: {
-                        position: 'bottom'
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '70%',
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                formatter: function (w) {
+                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                }
+                            }
+                        }
                     }
                 }
-            }]
+            },
+            dataLabels: {
+                enabled: true,
+                formatter: function (val, opts) {
+                    return opts.w.config.series[opts.seriesIndex] + ' (' + Math.round(val) + '%)';
+                }
+            },
+            legend: {
+                position: 'bottom',
+                formatter: function(seriesName, opts) {
+                    return seriesName + ' - ' + opts.w.globals.series[opts.seriesIndex];
+                }
+            }
         };
 
         const chart = new ApexCharts(document.querySelector("#stateChart"), options);
         chart.render();
+
     } catch (error) {
         console.error('Error:', error);
     }
 }
+
+function initStateDistribution() {
+    fetch('/api/state-distribution')
+        .then(response => response.json())
+        .then(data => {
+            const options = {
+                series: data.map(item => item.total),
+                labels: data.map(item => item.nombre),
+                chart: {
+                    type: 'donut',
+                    height: 400
+                },
+                colors: ['#dc3545', '#ffc107', '#28a745'], // Rojo, Naranja, Verde
+                legend: {
+                    position: 'bottom'
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '70%'
+                        }
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#stateChart"), options);
+            chart.render();
+        });
+}
+
+const dataTableEsES = {
+    "decimal": "",
+    "emptyTable": "No hay datos disponibles",
+    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+    "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+    "infoFiltered": "(filtrado de _MAX_ registros totales)",
+    "infoPostFix": "",
+    "thousands": ",",
+    "lengthMenu": "Mostrar _MENU_ registros",
+    "loadingRecords": "Cargando...",
+    "processing": "Procesando...",
+    "search": "Buscar:",
+    "zeroRecords": "No se encontraron coincidencias",
+    "paginate": {
+        "first": "Primero",
+        "last": "Último",
+        "next": "Siguiente",
+        "previous": "Anterior"
+    },
+    "aria": {
+        "sortAscending": ": activar para ordenar ascendentemente",
+        "sortDescending": ": activar para ordenar descendentemente"
+    }
+};
+
+// Y usar en las inicializaciones de DataTables:
+$('#miTabla').DataTable({
+    language: dataTableEsES,
+    // ... resto de opciones
+});

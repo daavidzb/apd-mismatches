@@ -1275,3 +1275,80 @@ body {
 .animate__fadeOut {
     animation: fadeOut 0.3s ease;
 }
+
+/* Navbar improvements */
+.nav-user-button {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+}
+
+.nav-user-button:hover,
+.nav-user-button:focus {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* System status indicators */
+.badge.bg-success {
+    background-color: #28a745 !important;
+    padding: 0.5rem 0.75rem;
+}
+
+.text-light-50 {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Last update indicator */
+#lastUpdate {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Navbar user button */
+.nav-user-button {
+    color: #fff !important;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.nav-user-button:hover,
+.nav-user-button:focus {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-user-button:active {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Dropdown improvements */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item-text {
+    padding: 0.5rem 1rem;
+}
+
+/* Z-index fix for dropdowns */
+.dropdown-menu[data-bs-popper] {
+    z-index: 1050;
+}

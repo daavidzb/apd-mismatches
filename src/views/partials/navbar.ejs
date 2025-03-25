@@ -1,46 +1,41 @@
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+<nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container-fluid">
-        <div class="d-flex align-items-center">
-            <h1 class="navbar-title mb-0">
-                <%= title %>
-                <% if (active === 'dashboard') { %>
-                    <!-- <small class="d-block text-light-50 fs-6">Bienvenido, <%= user.nombre %></small> -->
-                <% } %>
-            </h1>
-        </div>
-        
-        <div class="ms-auto">
-            <% if (user) { %>
-                <div class="dropdown">
-                    <button class="btn btn-link dropdown-toggle nav-user-button" 
-                            type="button" 
-                            id="userDropdown" 
-                            data-bs-toggle="dropdown" 
-                            aria-expanded="false">
-                        <div class="d-flex align-items-center">
-                            <div class="user-avatar">
-                                <i class="bi bi-person"></i>
-                            </div>
-                            <span class="user-name d-none d-md-inline"><%= user.nombre %></span>
-                        </div>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                        <li>
-                            <span class="dropdown-item-text">
-                                <i class="bi bi-person-badge"></i>
-                                <%= user.username %>
-                            </span>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="/auth/logout">
-                                <i class="bi bi-box-arrow-right"></i>
-                                Cerrar sesión
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+        <div class="navbar-title">
+            <h1><%= title %></h1>
+            <% if (active === 'dashboard') { %>
+                <small class="text-light-50">Panel de Control</small>
             <% } %>
+        </div>
+
+        <div class="ms-auto d-flex align-items-center">
+            <div class="dropdown">
+                <button class="btn btn-link nav-user-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div class="ms-2 d-none d-md-block">
+                            <div class="fw-medium text-white"><%= user.nombre %></div>
+                            <small class="text-light-50"><%= user.username %></small>
+                        </div>
+                    </div>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" data-bs-popper="none">
+                    <li>
+                        <div class="dropdown-item-text">
+                            <small class="text-muted">Rol</small>
+                            <div><%= user.rol || 'Usuario' %></div>
+                        </div>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="/auth/logout">
+                            <i class="bi bi-box-arrow-right"></i>
+                            Cerrar sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </nav>

@@ -20,25 +20,15 @@ const dataTableEsES = {
     "aria": {
         "sortAscending": ": activar para ordenar ascendentemente",
         "sortDescending": ": activar para ordenar descendentemente"
+    },
+    buttons: {
+        copyTitle: 'Copiado al portapapeles',
+        copySuccess: {
+            _: '%d filas copiadas',
+            1: '1 fila copiada'
+        },
+        excelHtml5: 'Exportar a Excel',
+        pdfHtml5: 'Exportar a PDF',
+        print: 'Imprimir'
     }
 };
-
-$(document).ready(function() {
-    $('#descuadresTable').DataTable({
-        language: dataTableEsES,
-        dom: 'Bfrtip',
-        buttons: [
-            {
-                extend: 'excelHtml5',
-                text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-                className: 'btn btn-success',
-                exportOptions: {
-                    columns: [0, 1, 2, 3, 4, 5]
-                }
-            }
-        ],
-        order: [[0, 'desc'], [1, 'asc']],
-        pageLength: 20,
-        responsive: true
-    });
-});

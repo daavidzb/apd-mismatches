@@ -1,10 +1,33 @@
 document.addEventListener('DOMContentLoaded', function() {
     let tables = {};
 
-    const configBase = {
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+    const dataTableEsES = {
+        "decimal": "",
+        "emptyTable": "No hay datos disponibles",
+        "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+        "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+        "infoFiltered": "(filtrado de _MAX_ registros totales)",
+        "infoPostFix": "",
+        "thousands": ",",
+        "lengthMenu": "Mostrar _MENU_ registros",
+        "loadingRecords": "Cargando...",
+        "processing": "Procesando...",
+        "search": "Buscar:",
+        "zeroRecords": "No se encontraron coincidencias",
+        "paginate": {
+            "first": "Primero",
+            "last": "Último",
+            "next": "Siguiente",
+            "previous": "Anterior"
         },
+        "aria": {
+            "sortAscending": ": activar para ordenar ascendentemente",
+            "sortDescending": ": activar para ordenar descendentemente"
+        }
+    };
+
+    const configBase = {
+        language: dataTableEsES,
         processing: true,
         pageLength: 10,
         responsive: true,
@@ -107,6 +130,21 @@ document.addEventListener('DOMContentLoaded', function() {
             tables[tableId].ajax.reload();
         }
     });
+});
+
+const tablaPendientes = $('#tablaPendientes').DataTable({
+    language: dataTableEsES,
+    // ... rest of config
+});
+
+const tablaEnProceso = $('#tablaEnProceso').DataTable({
+    language: dataTableEsES,
+    // ... rest of config
+});
+
+const tablaGestionados = $('#tablaGestionados').DataTable({
+    language: dataTableEsES,
+    // ... rest of config
 });
 
 // Función para gestionar descuadre
