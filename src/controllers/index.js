@@ -52,9 +52,9 @@ const mismatches_view = async (req, res) => {
       });
     });
 
-    res.render("mismatches", { 
+    res.render("mismatches", {
       descuadres: results,
-      title: 'Descuadres' 
+      title: "Descuadres",
     });
   } catch (error) {
     console.log(error);
@@ -319,7 +319,10 @@ const upload_excel = async (req, res) => {
       fileFilter: (req, file, callback) => {
         let ext = path.extname(file.originalname);
         if (ext !== ".xlsx" && ext !== ".xls") {
-          return callback(new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"), false);
+          return callback(
+            new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"),
+            false
+          );
         }
         callback(null, true);
       },
@@ -332,21 +335,27 @@ const upload_excel = async (req, res) => {
       }
 
       const results = [];
-      
+
       for (const file of req.files) {
         try {
           // Extraer fecha del nombre del archivo
-          const dateMatch = file.originalname.match(/APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/);
+          const dateMatch = file.originalname.match(
+            /APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/
+          );
           if (!dateMatch) {
             results.push({
               filename: file.originalname,
               error: true,
-              razon: "Formato de nombre inválido"
+              razon: "Formato de nombre inválido",
             });
             continue;
           }
 
-          const reportDate = new Date(dateMatch[1], parseInt(dateMatch[2]) - 1, dateMatch[3]);
+          const reportDate = new Date(
+            dateMatch[1],
+            parseInt(dateMatch[2]) - 1,
+            dateMatch[3]
+          );
 
           // Verificar reporte existente
           const existingReport = await new Promise((resolve, reject) => {
@@ -365,7 +374,7 @@ const upload_excel = async (req, res) => {
               filename: file.originalname,
               error: true,
               razon: "Reporte duplicado",
-              detalles: `Ya existe un reporte para la fecha ${reportDate.toLocaleDateString()}`
+              detalles: `Ya existe un reporte para la fecha ${reportDate.toLocaleDateString()}`,
             });
             continue;
           }
@@ -393,16 +402,28 @@ const upload_excel = async (req, res) => {
                 ) {
                   return {
                     isInvalid: true,
-                    codigo: rowValues[2]?.toString().trim().replace(/^0+/, "") || "",
+                    codigo:
+                      rowValues[2]?.toString().trim().replace(/^0+/, "") || "",
                     descripcion: rowValues[3]?.toString().trim() || "",
-                    razon: `${rowValues[7]?.toString().trim() === "No existe" ? "APD" : "FarmaTools"} no existe`
+                    razon: `${
+                      rowValues[7]?.toString().trim() === "No existe"
+                        ? "APD"
+                        : "FarmaTools"
+                    } no existe`,
                   };
                 }
 
-                const farmatools = parseInt(rowValues[5]?.toString().replace("FarmaTools=", "")) || 0;
-                const armarioAPD = parseInt(rowValues[7]?.toString().replace("Armario_APD=", "")) || 0;
+                const farmatools =
+                  parseInt(
+                    rowValues[5]?.toString().replace("FarmaTools=", "")
+                  ) || 0;
+                const armarioAPD =
+                  parseInt(
+                    rowValues[7]?.toString().replace("Armario_APD=", "")
+                  ) || 0;
                 const diferencia = farmatools - armarioAPD;
-                const codigoMed = rowValues[2]?.toString().trim().replace(/^0+/, "") || "";
+                const codigoMed =
+                  rowValues[2]?.toString().trim().replace(/^0+/, "") || "";
 
                 return {
                   isInvalid: false,
@@ -418,8 +439,12 @@ const upload_excel = async (req, res) => {
             })
             .filter((item) => item !== null);
 
-          const validMedicines = processedData.filter(item => !item.isInvalid);
-          const invalidMedicines = processedData.filter(item => item.isInvalid);
+          const validMedicines = processedData.filter(
+            (item) => !item.isInvalid
+          );
+          const invalidMedicines = processedData.filter(
+            (item) => item.isInvalid
+          );
 
           // Insertar reporte
           const reportResult = await new Promise((resolve, reject) => {
@@ -438,15 +463,17 @@ const upload_excel = async (req, res) => {
             await new Promise((resolve, reject) => {
               connection.query(
                 "INSERT INTO descuadres (id_reporte, num_almacen, codigo_med, descripcion, cantidad_farmatools, cantidad_armario_apd, descuadre) VALUES ?",
-                [validMedicines.map(item => [
-                  reportResult.insertId,
-                  item.num_almacen,
-                  item.codigo_med,
-                  item.descripcion,
-                  item.cantidad_farmatools,
-                  item.cantidad_armario_apd,
-                  item.descuadre
-                ])],
+                [
+                  validMedicines.map((item) => [
+                    reportResult.insertId,
+                    item.num_almacen,
+                    item.codigo_med,
+                    item.descripcion,
+                    item.cantidad_farmatools,
+                    item.cantidad_armario_apd,
+                    item.descuadre,
+                  ]),
+                ],
                 (error) => {
                   if (error) reject(error);
                   resolve();
@@ -460,16 +487,15 @@ const upload_excel = async (req, res) => {
             fecha: reportDate,
             procesado: true,
             medicamentosValidos: validMedicines.length,
-            medicamentosInvalidos: invalidMedicines
+            medicamentosInvalidos: invalidMedicines,
           });
-
         } catch (error) {
           console.error(`Error processing file ${file.originalname}:`, error);
           results.push({
             filename: file.originalname,
             error: true,
             razon: "Error al procesar el archivo",
-            detalles: error.message
+            detalles: error.message,
           });
         }
       }
@@ -520,7 +546,11 @@ const get_analysis = async (req, res) => {
                   MAX(r2.fecha_reporte)
               FROM descuadres d2
               JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
-              ${month !== "all" ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}` : ''}
+              ${
+                month !== "all"
+                  ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}`
+                  : ""
+              }
               GROUP BY d2.codigo_med
           )
       ),
@@ -531,10 +561,11 @@ const get_analysis = async (req, res) => {
               mg.id_estado,
               mg.fecha_gestion,
               CASE 
-                  WHEN mg.id_estado = 3 THEN 'Corregido'
-                  WHEN mg.id_estado = 2 THEN 'En proceso'
-                  ELSE 'Pendiente'
-              END as estado_gestion
+            WHEN mg.id_estado = 3 THEN 'Corregido'
+            WHEN mg.id_estado = 2 THEN 'En proceso'
+            WHEN mg.id_estado = 4 THEN 'Regularizar'
+            ELSE 'Pendiente'
+        END as estado_gestion
           FROM medicamentos_gestionados mg
           JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
           JOIN usuarios u ON mg.id_usuario = u.id_usuario
@@ -1097,10 +1128,11 @@ const dashboard_view = async (req, res) => {
       // Total último mes (distinct)
       new Promise((resolve, reject) => {
         connection.query(
-          `SELECT COUNT(DISTINCT d.codigo_med) as total 
-           FROM descuadres d 
+          `SELECT COUNT(DISTINCT d.codigo_med) as total
+           FROM descuadres d
            JOIN reportes r ON d.id_reporte = r.id_reporte 
-           WHERE r.fecha_reporte >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)`,
+           WHERE YEAR(r.fecha_reporte) = YEAR(CURDATE()) 
+           AND MONTH(r.fecha_reporte) = MONTH(CURDATE())`,
           (error, results) => {
             if (error) reject(error);
             resolve(results[0].total);
@@ -1110,15 +1142,25 @@ const dashboard_view = async (req, res) => {
       // Total pendientes
       new Promise((resolve, reject) => {
         connection.query(
-          `SELECT COUNT(DISTINCT d.codigo_med) as total
-           FROM descuadres d
-           LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
-           WHERE mg.id_gestion IS NULL
-           OR d.codigo_med NOT IN (
-             SELECT d2.codigo_med
-             FROM medicamentos_gestionados mg2
-             JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
-           )`,
+          `WITH UltimosEstados AS (
+          SELECT 
+              d.codigo_med,
+              mg.id_estado,
+              ed.nombre,
+              mg.fecha_gestion,
+              ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
+          FROM descuadres d
+          LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+          LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+          WHERE d.id_descuadre IN (
+              SELECT MAX(id_descuadre)
+              FROM descuadres
+              GROUP BY codigo_med
+          )
+      )
+      SELECT COUNT(*) as total
+      FROM UltimosEstados
+      WHERE (rn = 1 AND nombre IS NULL) OR rn IS NULL`,
           (error, results) => {
             if (error) reject(error);
             resolve(results[0].total);
@@ -1129,9 +1171,15 @@ const dashboard_view = async (req, res) => {
 
     const [hoy, ayer, resueltos, enProceso, total, pendientes] = stats;
     const hoyVsAyer = ayer ? Math.round(((hoy - ayer) / ayer) * 100) : 0;
-    const porcentajeResueltos = total ? Math.round((resueltos / total) * 100) : 0;
-    const porcentajeEnProceso = total ? Math.round((enProceso / total) * 100) : 0;
-    const porcentajePendientes = total ? Math.round((pendientes / total) * 100) : 0;
+    const porcentajeResueltos = total
+      ? Math.round((resueltos / total) * 100)
+      : 0;
+    const porcentajeEnProceso = total
+      ? Math.round((enProceso / total) * 100)
+      : 0;
+    const porcentajePendientes = total
+      ? Math.round((pendientes / total) * 100)
+      : 0;
 
     res.render("dashboard", {
       title: "Dashboard",
@@ -1188,41 +1236,85 @@ const get_state_distribution = async (req, res) => {
   try {
     const results = await new Promise((resolve, reject) => {
       connection.query(
-        `SELECT 
-           COALESCE(ed.nombre, 'Pendiente') as nombre,
-           COUNT(DISTINCT d.codigo_med) as total
-         FROM descuadres d
-         LEFT JOIN (
-           SELECT d2.codigo_med, mg.id_estado
-           FROM medicamentos_gestionados mg
-           JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
-           WHERE mg.id_gestion IN (
-             SELECT MAX(mg2.id_gestion)
-             FROM medicamentos_gestionados mg2
-             JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
-             GROUP BY d2.codigo_med
-           )
-         ) latest_status ON d.codigo_med = latest_status.codigo_med
-         LEFT JOIN estados_descuadre ed ON latest_status.id_estado = ed.id_estado
-         GROUP BY COALESCE(ed.nombre, 'Pendiente')
-         ORDER BY 
-           CASE 
-             WHEN nombre = 'Pendiente' THEN 1
-             WHEN nombre = 'En proceso' THEN 2
-             WHEN nombre = 'Corregido' THEN 3
-             ELSE 4
-           END`,
+        `WITH UltimosEstados AS (
+                    SELECT 
+                        d.codigo_med,
+                        mg.id_estado,
+                        ed.nombre,
+                        mg.fecha_gestion,
+                        ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
+                    FROM descuadres d
+                    LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+                    LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+                    WHERE d.id_descuadre IN (
+                        SELECT MAX(id_descuadre)
+                        FROM descuadres
+                        GROUP BY codigo_med
+                    )
+                )
+                SELECT 
+                    COALESCE(nombre, 'Pendiente') as nombre,
+                    COUNT(*) as total
+                FROM UltimosEstados
+                WHERE rn = 1 OR rn IS NULL
+                GROUP BY COALESCE(nombre, 'Pendiente')
+                ORDER BY 
+                    CASE 
+                        WHEN nombre = 'Pendiente' THEN 1
+                        WHEN nombre = 'En proceso' THEN 2
+                        WHEN nombre = 'Regularizar' THEN 3
+                        WHEN nombre = 'Corregido' THEN 4
+                        ELSE 5
+                    END`,
         (error, results) => {
           if (error) reject(error);
           resolve(results);
         }
       );
     });
-
     res.json(results);
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Consulta para obtener medicamentos que pueden ser regularizados
+const get_analysis_all = async (req, res) => {
+  try {
+    const query = `
+          SELECT DISTINCT d.codigo_med, d.descripcion, 
+                 d.descuadre as ultimo_descuadre,
+                 r.fecha_reporte as fecha_ultimo_descuadre,
+                 COALESCE(e.nombre, 'Pendiente') as estado_gestion,
+                 (SELECT COUNT(*) > 1 AND 
+                  ABS(STDDEV(d2.descuadre)) > 2
+                  FROM descuadres d2 
+                  WHERE d2.codigo_med = d.codigo_med) as tiene_cambios_tendencia
+          FROM descuadres d
+          LEFT JOIN reportes r ON d.id_reporte = r.id_reporte
+          LEFT JOIN (
+              SELECT mg.id_descuadre, e.nombre, mg.id_gestion
+              FROM medicamentos_gestionados mg
+              JOIN estados_descuadre e ON mg.id_estado = e.id_estado
+              WHERE mg.id_gestion IN (
+                  SELECT MAX(id_gestion)
+                  FROM medicamentos_gestionados
+                  GROUP BY id_descuadre
+              )
+          ) gestion ON d.id_descuadre = gestion.id_descuadre
+          LEFT JOIN estados_descuadre e ON gestion.nombre = e.nombre
+          WHERE r.fecha_reporte = (
+              SELECT MAX(fecha_reporte)
+              FROM reportes
+              WHERE DATE_FORMAT(fecha_reporte, '%Y-%m') = ?
+          )`;
+
+    const [results] = await connection.query(query, [req.params.month]);
+    res.json({ analysis: results });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Error al obtener datos" });
   }
 };
 
@@ -1249,4 +1341,5 @@ module.exports = {
   dashboard_view,
   get_trend_data,
   get_state_distribution,
+  get_analysis_all,
 };

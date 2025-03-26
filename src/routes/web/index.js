@@ -22,6 +22,7 @@ router.get('/api/reports/evolution/:code', controller.get_medicine_evolution);
 router.get('/api/reports/medicines', controller.get_medicines_list);
 router.get('/api/reports/compare/:month1/:month2', controller.get_compare_months);
 router.get('/api/analysis/:month?', controller.get_analysis);
+router.get('/api/analysis/all/:month?', controller.get_analysis_all); 
 router.get('/api/analysis/detail/:month/:code', controller.get_analysis_detail);
 router.get('/api/analysis/manage/:code', controller.get_medicine_management);
 router.post('/api/analysis/manage/:code', controller.update_medicine_management);

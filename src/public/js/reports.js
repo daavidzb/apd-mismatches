@@ -323,7 +323,6 @@ async function initializeEvolutionChart() {
         }
     }
 
-    
     medicineSearch.addEventListener('input', function() {
         const searchTerm = this.value;
         if (searchTerm.length < 2) {
@@ -434,7 +433,6 @@ async function initializeCompareChart() {
                 colors: ['#00549F']
             };
 
-            // Gráfico detallado de medicamentos
             const detailOptions = {
                 series: [
                     {
@@ -501,7 +499,6 @@ async function initializeCompareChart() {
     compareMonth1.addEventListener('change', updateCompareChart);
     compareMonth2.addEventListener('change', updateCompareChart);
     
-    // Llamar a updateCompareChart al inicio para mostrar el estado vacío
     updateCompareChart();
 }
 
