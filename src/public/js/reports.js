@@ -3,10 +3,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const months = getLastTwelveMonths();
     populateMonthSelectors(months);
 
+    const categoriesMonth = document.querySelector('#categoriesMonth');
+    if (categoriesMonth) {
+        const allOption = document.createElement('option');
+        allOption.value = 'all';
+        allOption.textContent = 'Todos los períodos';
+        categoriesMonth.appendChild(allOption);
+
+        months.forEach(month => {
+            const option = new Option(month.label, month.value);
+            categoriesMonth.add(option);
+        });
+    }
+
     initializeSummaryChart();
     loadTopMedicines();
     initializeEvolutionChart();
     initializeCompareChart();
+    loadCategoriesReport();
 });
 
 function getLastTwelveMonths() {
@@ -500,6 +514,112 @@ async function initializeCompareChart() {
     compareMonth2.addEventListener('change', updateCompareChart);
     
     updateCompareChart();
+}
+
+async function loadCategoriesReport() {
+    const categoriesMonth = document.querySelector('#categoriesMonth');
+    let categoriesChart = null;
+    let motivesChart = null;
+
+    async function updateCharts() {
+        try {
+            const response = await fetch(`/api/reports/categories/${categoriesMonth.value}`);
+            if (!response.ok) throw new Error('Error al obtener datos');
+            const data = await response.json();
+
+            // Gráfico de categorías
+            const categoriesOptions = {
+                series: [{
+                    name: 'Descuadres',
+                    data: Object.values(data.categories)
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 350,
+                    toolbar: {
+                        show: true
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: true,
+                        distributed: true
+                    }
+                },
+                colors: ['#00549F', '#217346', '#ffc107', '#dc3545', '#6f42c1'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return val.toFixed(0);
+                    }
+                },
+                xaxis: {
+                    categories: Object.keys(data.categories)
+                },
+                title: {
+                    text: 'Distribución por Categorías',
+                    align: 'left'
+                }
+            };
+
+            // Gráfico de motivos
+            const motivesOptions = {
+                series: [{
+                    name: 'Descuadres',
+                    data: Object.values(data.motives)
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 350,
+                    toolbar: {
+                        show: true
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: true,
+                        distributed: true
+                    }
+                },
+                colors: ['#00549F', '#217346', '#ffc107', '#dc3545', '#6f42c1'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return val.toFixed(0);
+                    }
+                },
+                xaxis: {
+                    categories: Object.keys(data.motives)
+                },
+                title: {
+                    text: 'Distribución por Motivos',
+                    align: 'left'
+                }
+            };
+
+            // Actualizar o crear gráficos
+            if (categoriesChart) categoriesChart.destroy();
+            if (motivesChart) motivesChart.destroy();
+
+            categoriesChart = new ApexCharts(document.querySelector("#categoriesChart"), categoriesOptions);
+            motivesChart = new ApexCharts(document.querySelector("#motivesChart"), motivesOptions);
+
+            categoriesChart.render();
+            motivesChart.render();
+
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('error', 'Error al cargar el reporte de categorías');
+        }
+    }
+
+    // Event listener para cambios en el selector de mes
+    categoriesMonth.addEventListener('change', updateCharts);
+    
+    // Carga inicial
+    await updateCharts();
 }
 
 const dataTableEsES = {

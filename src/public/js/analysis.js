@@ -1,6 +1,6 @@
-document.addEventListener("DOMContentLoaded", function () {
-  let dataTable = null; // Mover la declaración dentro del scope
+let dataTable = null;
 
+document.addEventListener("DOMContentLoaded", function () {
   const months = getLastTwelveMonths();
   const analysisMonth = document.getElementById("analysisMonth");
 
@@ -18,8 +18,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Definir la función de inicialización
-  initializeTable = async function (month) {
+  initializeTable = async function (month, keepFilter = false) {
     try {
+      // Guardar el filtro activo actual si keepFilter es true
+      let activeFilter = null;
+      if (keepFilter && dataTable) {
+        activeFilter = $(".filter-buttons .btn.active")
+          .attr("class")
+          .match(/filter-\w+/)[0];
+      }
+
       const response = await fetch(`/api/analysis/${month}`);
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
@@ -318,6 +326,11 @@ document.addEventListener("DOMContentLoaded", function () {
               );
             }
           });
+
+          // Si hay un filtro activo que mantener, reactivarlo
+          if (keepFilter && activeFilter) {
+            $(`.${activeFilter}`).trigger("click");
+          }
         },
       });
 
@@ -508,142 +521,162 @@ async function gestionarMedicamento(codigo, descripcion, data) {
       data = await response.json();
     }
 
-    // Mostrar modal de gestión
     const result = await Swal.fire({
       title: "Gestionar Medicamento",
       html: `
-              <div class="text-start">
-                  <h6 class="mb-3">
-                      <i class="bi bi-capsule me-2"></i>${descripcion}
-                      <br>
-                      <small class="text-muted">
-                          <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
-                      </small>
-                  </h6>
-                  <div class="mb-3">
-                      <label class="form-label">Estado</label>
-                      <select class="form-select" id="estado">
-                          ${data.estados
-                            .map(
-                              (estado) => `
-                              <option value="${estado.id_estado}"
-                                  ${
-                                    data.medicamento?.id_estado ===
-                                    estado.id_estado
-                                      ? "selected"
-                                      : ""
-                                  }>
-                                  ${estado.nombre}
-                              </option>
-                          `
-                            )
-                            .join("")}
-                      </select>
-                  </div>
-                  <div class="mb-3">
-                      <label class="form-label">Categoría</label>
-                      <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
-                          <option value="">Seleccionar categoría...</option>
-                          ${data.categorias
-                            .map(
-                              (cat) => `
-                              <option value="${cat.id_categoria}"
-                                  ${
-                                    data.medicamento?.id_categoria ===
-                                    cat.id_categoria
-                                      ? "selected"
-                                      : ""
-                                  }>
-                                  ${cat.nombre}
-                              </option>
-                          `
-                            )
-                            .join("")}
-                      </select>
-                  </div>
-                  <div class="mb-3">
-                      <label class="form-label">Motivo</label>
-                      <select class="form-select" id="motivo" disabled>
-                          <option value="">Seleccionar motivo...</option>
-                      </select>
-                      <div id="motivosData" data-motivos='${JSON.stringify(
-                        data.motivos
-                      )}' style="display:none"></div>
-                  </div>
-                  <div class="mb-3">
-                      <label class="form-label">Observaciones</label>
-                      <textarea class="form-control" id="observaciones" rows="3">${
-                        data.medicamento?.observaciones || ""
-                      }</textarea>
-                  </div>
+          <div class="text-start">
+              <h6 class="mb-3">
+                  <i class="bi bi-capsule me-2"></i>${descripcion}
+                  <br>
+                  <small class="text-muted">
+                      <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
+                  </small>
+              </h6>
+              <div class="mb-3">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select" id="estado">
+                      ${data.estados.map(estado => `
+                          <option value="${estado.id_estado}"
+                              ${data.medicamento?.id_estado === estado.id_estado ? 'selected' : ''}>
+                              ${estado.nombre}
+                          </option>
+                      `).join('')}
+                  </select>
               </div>
-          `,
+              <div class="mb-3">
+                  <label class="form-label">Categoría</label>
+                  <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
+                      <option value="">Seleccionar categoría...</option>
+                      ${data.categorias.map(cat => `
+                          <option value="${cat.id_categoria}"
+                              ${data.medicamento?.id_categoria === cat.id_categoria ? 'selected' : ''}>
+                              ${cat.nombre}
+                          </option>
+                      `).join('')}
+                  </select>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Motivo</label>
+                  <select class="form-select" id="motivo" disabled>
+                      <option value="">Seleccionar motivo...</option>
+                  </select>
+                  <div id="motivosData" data-motivos='${JSON.stringify(data.motivos)}' style="display:none"></div>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Observaciones</label>
+                  <textarea class="form-control" id="observaciones" rows="3">${data.medicamento?.observaciones || ''}</textarea>
+              </div>
+          </div>
+      `,
       didOpen: () => {
-        const categoriaSelect = document.getElementById("categoria");
-        if (categoriaSelect.value) {
-          actualizarMotivos(categoriaSelect.value, data.medicamento?.id_motivo);
-        }
+          const categoriaSelect = document.getElementById('categoria');
+          if (categoriaSelect.value) {
+              actualizarMotivos(categoriaSelect.value, data.medicamento?.id_motivo);
+          }
       },
       preConfirm: () => {
-        const categoria = document.getElementById("categoria").value;
-        const motivo = document.getElementById("motivo").value;
+          const categoria = document.getElementById('categoria').value;
+          const motivo = document.getElementById('motivo').value;
 
-        if (!categoria) {
-          Swal.showValidationMessage("Debes seleccionar una categoría");
-          return false;
-        }
-        if (!motivo) {
-          Swal.showValidationMessage("Debes seleccionar un motivo");
-          return false;
-        }
-        return {
-          id_estado: document.getElementById("estado").value,
-          id_categoria: categoria,
-          id_motivo: motivo,
-          observaciones: document.getElementById("observaciones").value,
-        };
+          if (!categoria) {
+              Swal.showValidationMessage('Debes seleccionar una categoría');
+              return false;
+          }
+          if (!motivo) {
+              Swal.showValidationMessage('Debes seleccionar un motivo');
+              return false;
+          }
+          return {
+              id_estado: document.getElementById('estado').value,
+              id_categoria: categoria,
+              id_motivo: motivo,
+              observaciones: document.getElementById('observaciones').value
+          };
       },
       confirmButtonText: "Guardar",
       showCancelButton: true,
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#00549F",
+  });
+
+  if (result.isConfirmed) {
+    showNotification("info", "Guardando cambios...", "top-center");
+
+    const saveResponse = await fetch(`/api/analysis/update/${codigo}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result.value),
     });
 
-    if (result.isConfirmed) {
-      showNotification("info", "Guardando cambios...", "top-center");
+    const responseData = await saveResponse.json();
 
-      // Cambiar la ruta a la correcta
-      const saveResponse = await fetch(`/api/analysis/update/${codigo}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(result.value),
-      });
-
-      const responseData = await saveResponse.json();
-
-      if (!saveResponse.ok) {
-        if (responseData.isAlreadyManaged) {
-          await Swal.fire({
-            icon: "warning",
-            title: "Medicamento en gestión",
-            text: `Este medicamento está siendo gestionado por ${responseData.managedBy}`,
-            confirmButtonColor: "#00549F",
-          });
-          return;
-        }
-        throw new Error(responseData.error || "Error al guardar la gestión");
+    if (!saveResponse.ok) {
+      if (responseData.isAlreadyManaged) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Medicamento en gestión",
+          text: `Este medicamento está siendo gestionado por ${responseData.managedBy}`,
+          confirmButtonColor: "#00549F",
+        });
+        return;
       }
-
-      showNotification("success", "Medicamento gestionado correctamente");
-      // Recargar tabla
-      if (typeof initializeTable === "function") {
-        initializeTable(document.getElementById("analysisMonth").value);
-      }
+      throw new Error(responseData.error || "Error al guardar la gestión");
     }
-  } catch (error) {
-    console.error("Error:", error);
-    showNotification("error", "Error al gestionar el medicamento: " + error.message);
-  }
+
+    showNotification("success", "Medicamento gestionado correctamente");
+
+    // Obtener el filtro activo actual
+    const activeFilter = $('.filter-buttons .btn.active').attr('class').match(/filter-\w+/)[0];
+    
+    // Recargar datos manteniendo el estado actual
+    try {
+        const currentMonth = document.getElementById("analysisMonth").value;
+        const response = await fetch(`/api/analysis/${currentMonth}`);
+        if (!response.ok) throw new Error("Error al obtener datos actualizados");
+        const newData = await response.json();
+
+        // Usar la variable global dataTable
+        if (dataTable) {
+            dataTable.clear();
+            dataTable.rows.add(newData.analysis);
+            dataTable.draw();
+
+            // Reactivar el filtro
+            if (activeFilter) {
+                $(`.${activeFilter}`).trigger('click');
+            }
+
+            // Actualizar estadísticas
+            const stats = {
+                total: newData.analysis.length,
+                cambios: newData.analysis.filter(row => row.tipo_patron === 'cambios').length,
+                regulares: newData.analysis.filter(row => row.tipo_patron === 'regular').length,
+                temporales: newData.analysis.filter(row => row.tipo_patron === 'temporal').length,
+                pendientes: newData.analysis.filter(row => row.estado_gestion === 'Pendiente').length
+            };
+
+            // Actualizar el panel de estadísticas
+            updateStatsPanel(stats);
+        }
+
+        // Reinicializar tooltips
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(tooltip => {
+            const bsTooltip = bootstrap.Tooltip.getInstance(tooltip);
+            if (bsTooltip) {
+                bsTooltip.dispose();
+            }
+            new bootstrap.Tooltip(tooltip);
+        });
+    } catch (error) {
+        console.error("Error al recargar datos:", error);
+        showNotification("error", "Error al actualizar la tabla");
+    }
+}
+} catch (error) {
+  console.error("Error:", error);
+  showNotification("error", "Error al gestionar el medicamento: " + error.message);
+}
 }
 
 // Asegurar que el event listener está correctamente configurado
@@ -797,3 +830,43 @@ const dataTableEsES = {
     sortDescending: ": activar para ordenar descendentemente",
   },
 };
+
+// Agregar esta función auxiliar para actualizar el panel de estadísticas
+function updateStatsPanel(stats) {
+  const statsHtml = `
+      <div class="row mb-4 mt-2">
+          <div class="col">
+              <div class="card border-0 bg-light">
+                  <div class="card-body p-3">
+                      <div class="row text-center">
+                          <div class="col">
+                              <h6 class="mb-0 text-muted">Total</h6>
+                              <h3 class="mb-0">${stats.total}</h3>
+                          </div>
+                          <div class="col">
+                              <h6 class="mb-0 text-warning">Cambios</h6>
+                              <h3 class="mb-0">${stats.cambios}</h3>
+                          </div>
+                          <div class="col">
+                              <h6 class="mb-0 text-info">Regulares</h6>
+                              <h3 class="mb-0">${stats.regulares}</h3>
+                          </div>
+                          <div class="col">
+                              <h6 class="mb-0 text-purple">Temporales</h6>
+                              <h3 class="mb-0">${stats.temporales}</h3>
+                          </div>
+                          <div class="col">
+                              <h6 class="mb-0 text-danger">Pendientes</h6>
+                              <h3 class="mb-0">${stats.pendientes}</h3>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  `;
+
+  // Actualizar el panel de estadísticas
+  const oldStats = $('.card.border-0.bg-light').closest('.row');
+  oldStats.replaceWith(statsHtml);
+}

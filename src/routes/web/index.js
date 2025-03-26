@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const controller = require('../../controllers/index.js')
 const { isAuthenticated } = require('../../auth/middleware');
+const api = require('../../controllers/api/apis.js')
 
 router.get('/', isAuthenticated, (req, res) => {
     res.redirect('/dashboard');
@@ -15,6 +16,7 @@ router.post('/upload-files', controller.upload_excel)
 
 // Apis
 
+router.get('/api/reports/categories/:month', api.get_categories_report);
 router.get('/api/managed/:status', controller.get_managed_mismatches);
 router.get('/api/reports/summary/:month', controller.get_month_report)
 router.get('/api/reports/top-medicines/:month', controller.get_top_medicines);
