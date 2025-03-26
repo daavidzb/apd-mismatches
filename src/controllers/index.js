@@ -532,76 +532,88 @@ const get_analysis = async (req, res) => {
     }
 
     const query = `
-      WITH LastDescuadre AS (
-          SELECT
-              d.codigo_med,
-              d.descripcion,
-              d.descuadre as ultimo_descuadre,
-              r.fecha_reporte
-          FROM descuadres d
-          JOIN reportes r ON d.id_reporte = r.id_reporte
-          WHERE (d.codigo_med, r.fecha_reporte) IN (
-              SELECT 
-                  d2.codigo_med,
-                  MAX(r2.fecha_reporte)
-              FROM descuadres d2
-              JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
-              ${
-                month !== "all"
-                  ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}`
-                  : ""
-              }
-              GROUP BY d2.codigo_med
-          )
-      ),
-      GestionInfo AS (
-          SELECT 
-              d.codigo_med,
-              u.nombre as gestionado_por,
-              mg.id_estado,
-              mg.fecha_gestion,
-              CASE 
-            WHEN mg.id_estado = 3 THEN 'Corregido'
-            WHEN mg.id_estado = 2 THEN 'En proceso'
-            WHEN mg.id_estado = 4 THEN 'Regularizar'
-            ELSE 'Pendiente'
-        END as estado_gestion
-          FROM medicamentos_gestionados mg
-          JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
-          JOIN usuarios u ON mg.id_usuario = u.id_usuario
-          WHERE (d.codigo_med, mg.fecha_gestion) IN (
-              SELECT codigo_med, MAX(fecha_gestion)
-              FROM medicamentos_gestionados mg2
-              JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
-              GROUP BY codigo_med
-          )
-      )
-      SELECT DISTINCT
-          ld.codigo_med,
-          ld.descripcion,
-          ld.ultimo_descuadre,
-          CASE WHEN COUNT(DISTINCT d.descuadre) > 1 THEN 1 ELSE 0 END as tiene_cambios_tendencia,
-          COALESCE(gi.gestionado_por, NULL) as gestionado_por,
-          COALESCE(gi.estado_gestion, 'Pendiente') as estado_gestion,
-          COALESCE(gi.fecha_gestion, NULL) as fecha_gestion
-      FROM LastDescuadre ld
-      LEFT JOIN descuadres d ON ld.codigo_med = d.codigo_med
-      LEFT JOIN GestionInfo gi ON ld.codigo_med = gi.codigo_med
-      GROUP BY 
-          ld.codigo_med, 
-          ld.descripcion, 
-          ld.ultimo_descuadre,
-          gi.gestionado_por, 
-          gi.estado_gestion, 
-          gi.fecha_gestion
-      ORDER BY ld.descripcion`;
+    WITH DescuadreTendencias AS (
+        SELECT 
+            d.codigo_med,
+            COUNT(*) as total_apariciones,
+            COUNT(DISTINCT d.descuadre) as valores_unicos,
+            GROUP_CONCAT(DISTINCT d.descuadre ORDER BY d.descuadre) as descuadres,
+            MAX(r.fecha_reporte) as ultima_fecha
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        GROUP BY d.codigo_med
+    ),
+    LastDescuadre AS (
+        SELECT
+            d.codigo_med,
+            d.descripcion,
+            d.descuadre as ultimo_descuadre,
+            r.fecha_reporte,
+            dt.total_apariciones,
+            dt.valores_unicos,
+            dt.descuadres,
+            CASE 
+                WHEN dt.total_apariciones = 1 THEN 'temporal'
+                WHEN dt.total_apariciones >= 2 AND dt.valores_unicos <= 2 THEN 'regular'
+                ELSE 'cambios'
+            END as tipo_patron
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
+        WHERE (d.codigo_med, r.fecha_reporte) IN (
+            SELECT d2.codigo_med, MAX(r2.fecha_reporte)
+            FROM descuadres d2
+            JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
+            ${
+              month !== "all"
+                ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}`
+                : ""
+            }
+            GROUP BY d2.codigo_med
+        )
+    ),
+    GestionInfo AS (
+        SELECT 
+            d.codigo_med,
+            u.nombre as gestionado_por,
+            mg.id_estado,
+            mg.fecha_gestion,
+            CASE 
+                WHEN mg.id_estado = 3 THEN 'Corregido'
+                WHEN mg.id_estado = 2 THEN 'En proceso'
+                WHEN mg.id_estado = 4 THEN 'Regularizar'
+                ELSE 'Pendiente'
+            END as estado_gestion
+        FROM medicamentos_gestionados mg
+        JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+        JOIN usuarios u ON mg.id_usuario = u.id_usuario
+        WHERE (d.codigo_med, mg.fecha_gestion) IN (
+            SELECT codigo_med, MAX(fecha_gestion)
+            FROM medicamentos_gestionados mg2
+            JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
+            GROUP BY codigo_med
+        )
+    )
+    SELECT DISTINCT
+        ld.codigo_med,
+        ld.descripcion,
+        ld.ultimo_descuadre,
+        ld.tipo_patron,
+        ld.total_apariciones,
+        ld.descuadres,
+        COALESCE(gi.gestionado_por, NULL) as gestionado_por,
+        COALESCE(gi.estado_gestion, 'Pendiente') as estado_gestion,
+        COALESCE(gi.fecha_gestion, NULL) as fecha_gestion
+    FROM LastDescuadre ld
+    LEFT JOIN GestionInfo gi ON ld.codigo_med = gi.codigo_med
+    ORDER BY ld.descripcion`;
 
     connection.query(query, [], (error, results) => {
       if (error) {
         console.error("Database error:", error);
         return res.status(500).json({ error: error.message });
       }
-      res.json({ analysis: results });
+      res.json({ analysis: results || [] });
     });
   } catch (error) {
     console.error("Error:", error);
@@ -612,6 +624,40 @@ const get_analysis = async (req, res) => {
 const get_analysis_detail = async (req, res) => {
   try {
     const { month, code } = req.params;
+
+    // Obtener información básica del medicamento
+    const medicina = await new Promise((resolve, reject) => {
+      connection.query(
+        `SELECT DISTINCT codigo_med, descripcion 
+               FROM descuadres 
+               WHERE codigo_med = ?`,
+        [code],
+        (error, results) => {
+          if (error) reject(error);
+          resolve(results[0]);
+        }
+      );
+    });
+
+    // Primero obtenemos todos los descuadres históricos para análisis de tendencia
+    const historialCompleto = await new Promise((resolve, reject) => {
+      connection.query(
+        `SELECT 
+                  DATE(r.fecha_reporte) as fecha,
+                  d.descuadre
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              WHERE d.codigo_med = ?
+              ORDER BY r.fecha_reporte ASC`,
+        [code],
+        (error, results) => {
+          if (error) reject(error);
+          resolve(results);
+        }
+      );
+    });
+
+    // Luego obtenemos los detalles filtrados por mes si es necesario
     let whereClause = "";
     let params = [code];
 
@@ -622,41 +668,27 @@ const get_analysis_detail = async (req, res) => {
       params.push(year, m);
     }
 
-    const medicina = await new Promise((resolve, reject) => {
-      connection.query(
-        `SELECT DISTINCT codigo_med, descripcion FROM descuadres WHERE codigo_med = ?`,
-        [code],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results[0]);
-        }
-      );
-    });
-
-    // Get details
     const details = await new Promise((resolve, reject) => {
       connection.query(
-        `
-            WITH DailyDescuadres AS (
-                SELECT 
-                    DATE(r.fecha_reporte) as fecha,
-                    d.descuadre,
-                    LAG(d.descuadre) OVER (ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
-                FROM descuadres d
-                JOIN reportes r ON d.id_reporte = r.id_reporte
-                WHERE d.codigo_med = ? ${whereClause}
-                GROUP BY DATE(r.fecha_reporte), d.descuadre
-                ORDER BY fecha ASC
-            )
-            SELECT 
-                fecha,
-                descuadre,
-                CASE 
-                    WHEN descuadre != COALESCE(prev_descuadre, descuadre) THEN 1
-                    ELSE 0
-                END as cambio_tendencia
-            FROM DailyDescuadres
-            `,
+        `WITH DailyDescuadres AS (
+                  SELECT 
+                      DATE(r.fecha_reporte) as fecha,
+                      d.descuadre,
+                      LAG(d.descuadre) OVER (ORDER BY DATE(r.fecha_reporte)) as prev_descuadre
+                  FROM descuadres d
+                  JOIN reportes r ON d.id_reporte = r.id_reporte
+                  WHERE d.codigo_med = ? ${whereClause}
+                  GROUP BY DATE(r.fecha_reporte), d.descuadre
+                  ORDER BY fecha ASC
+              )
+              SELECT 
+                  fecha,
+                  descuadre,
+                  CASE 
+                      WHEN ABS(descuadre - COALESCE(prev_descuadre, descuadre)) > ABS(COALESCE(prev_descuadre, descuadre) * 0.5) THEN 1
+                      ELSE 0
+                  END as cambio_tendencia
+              FROM DailyDescuadres`,
         params,
         (error, results) => {
           if (error) reject(error);
@@ -665,7 +697,26 @@ const get_analysis_detail = async (req, res) => {
       );
     });
 
-    res.json({ medicina, details });
+    // Analizar tendencia
+    const tieneCambiosSignificativos =
+      historialCompleto.length >= 2 &&
+      historialCompleto.some((curr, i) => {
+        if (i === 0) return false;
+        const prev = historialCompleto[i - 1];
+        return (
+          Math.abs(curr.descuadre - prev.descuadre) >
+          Math.abs(prev.descuadre * 0.5)
+        );
+      });
+
+    res.json({
+      medicina,
+      details,
+      analisis: {
+        total_registros: historialCompleto.length,
+        tiene_cambios_significativos: tieneCambiosSignificativos,
+      },
+    });
   } catch (error) {
     console.error("Error in get_analysis_detail:", error);
     res.status(500).json({ error: error.message });
