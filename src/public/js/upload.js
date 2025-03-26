@@ -20,69 +20,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    uploadForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const submitButton = this.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
-
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
         try {
+            showNotification('info', 'Procesando archivo...', 'top-center');
+            
             const formData = new FormData(this);
-            const response = await fetch('/upload-files', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             });
-            
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message);
+            }
+
             const result = await response.json();
+            showNotification('success', 'Archivo procesado correctamente');
             
-            if (response.ok) {
-                const duplicatedFiles = result.results.filter(f => f.error && f.razon === "Reporte duplicado");
-                const validFiles = result.results.filter(f => !f.error);
-                
-                await Swal.fire({
-                    icon: duplicatedFiles.length > 0 ? 'warning' : 'success',
-                    title: duplicatedFiles.length > 0 ? '¡Atención!' : '¡Archivos procesados!',
-                    html: `
-                        <div class="text-start">
-                            ${duplicatedFiles.length > 0 ? `
-                                <div class="alert alert-danger">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                    Se encontraron ${duplicatedFiles.length} reportes duplicados
-                                </div>
-                            ` : ''}
-                            <p><strong>Archivos procesados:</strong> ${validFiles.length}</p>
-                            <hr>
-                            <div class="uploaded-files">
-                                ${result.results.map(file => `
-                                    <div class="file-detail ${getFileDetailClass(file)}">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <strong>${file.filename}</strong>
-                                            ${getStatusBadge(file)}
-                                        </div>
-                                        <div class="small ${file.error ? 'text-danger' : 'text-muted'}">
-                                            ${getFileDetails(file)}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `,
-                    width: '600px',
-                    confirmButtonColor: '#00549F'
-                });
+            // Actualizar la tabla si existe
+            if (typeof loadReports === 'function') {
+                loadReports();
             }
         } catch (error) {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error al procesar los archivos',
-                confirmButtonColor: '#00549F'
-            });
-        } finally {
-            submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="bi bi-cloud-upload"></i> Subir archivos';
-            this.reset();
+            console.error("Error:", error);
+            showNotification('error', `Error al procesar el archivo: ${error.message}`);
+        }
+    });
+
+    // Para validación de archivo
+    fileInput.addEventListener('change', function() {
+        if (this.files[0]) {
+            const file = this.files[0];
+            if (!file.name.endsWith('.xlsx')) {
+                showNotification('warning', 'El archivo debe ser de formato Excel (.xlsx)');
+                this.value = '';
+            }
         }
     });
 

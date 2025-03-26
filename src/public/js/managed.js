@@ -389,3 +389,29 @@ async function showMedicineDetails(codigo) {
         });
     }
 }
+
+// Para actualización de estado
+async function actualizarEstado(id, nuevoEstado) {
+    try {
+        showNotification('info', 'Actualizando estado...', 'top-center');
+        
+        const response = await fetch('/api/managed/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, estado: nuevoEstado })
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al actualizar el estado');
+        }
+
+        showNotification('success', 'Estado actualizado correctamente');
+        // Recargar tabla
+        if (dataTable) {
+            dataTable.ajax.reload();
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        showNotification('error', 'Error al actualizar el estado');
+    }
+}

@@ -8,6 +8,14 @@
         </div>
 
         <div class="ms-auto d-flex align-items-center">
+            <div class="theme-switch me-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="themeSwitch">
+                    <label class="form-check-label text-light" for="themeSwitch">
+                        <i class="bi bi-moon-stars"></i>
+                    </label>
+                </div>
+            </div>
             <div class="dropdown">
                 <button class="btn btn-link nav-user-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <div class="d-flex align-items-center">
@@ -40,6 +48,16 @@
     </div>
 </nav>
 
+<!-- Agregar después del navbar -->
+<!-- <nav aria-label="breadcrumb" class="bg-light py-2 px-3 mb-3">
+    <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a href="/">Panel de Control</a></li>
+        <% if (active !== 'dashboard') { %>
+            <li class="breadcrumb-item active" aria-current="page"><%= title %></li>
+        <% } %>
+    </ol>
+</nav> -->
+
 <div class="sidebar">
     <div class="sidebar-header">
         <a class="navbar-brand" href="/dashboard">
@@ -47,38 +65,46 @@
         </a>
     </div>
     
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
-                <i class="bi bi-speedometer2 me-2"></i> Inicio
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
-                <i class="bi bi-file-earmark-excel me-2"></i> Subir Excel
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
-                <i class="bi bi-graph-up me-2"></i> Análisis
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
-                <i class="bi bi-sliders me-2"></i> Gestión
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
-                <i class="bi bi-list-check me-2"></i> Histórico
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
-                <i class="bi bi-file-earmark-bar-graph me-2"></i> Reportes
-            </a>
-        </li>
-    </ul>
+    <div class="sidebar-menu">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span class="ms-3">Panel de Control</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span class="ms-3"> Importar Reportes</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
+                    <i class="bi bi-graph-up"></i>
+                    <span class="ms-3">Sincronizar Inventario</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
+                    <i class="bi bi-check2-square"></i>
+                    <span class="ms-3">Seguimiento y Control</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
+                    <i class="bi bi-list-check"></i>
+                    <span class="ms-3">Inventario Detallado</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span class="ms-3">Informes y Métricas</span>
+                </a>
+            </li>
+        </ul>
+    </div>
 
     <div class="sidebar-footer">
         <div class="dropup w-100">
