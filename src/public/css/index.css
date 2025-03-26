@@ -1412,3 +1412,17 @@ body {
     --bs-tooltip-padding-y: 0.5rem;
     font-size: 0.85rem;
 }
+
+/* Agregar el color púrpura para los temporales */
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+/* Asegurar que el ícono es visible */
+.icon-shape.bg-purple i {
+    color: #fff;
+}

@@ -200,13 +200,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     });
 
                     $(".filter-regular").on("click", function () {
-                        applyFilter((settings, searchData, index) => {
-                            const row = dataTable.row(index).data();
-                            return row && 
-                                   row.tipo_patron === "regular" && 
-                                   row.estado_gestion === "Pendiente";
-                        });
-                    });
+                      applyFilter((settings, searchData, index) => {
+                          const row = dataTable.row(index).data();
+                          return row && 
+                                 row.tipo_patron === 'regular' && 
+                                 row.valores_unicos === 1 &&
+                                 row.total_apariciones >= 2 &&
+                                 row.estado_gestion === "Pendiente";
+                      });
+                  });
 
                     $(".filter-temporal").on("click", function () {
                         applyFilter((settings, searchData, index) => {
@@ -283,8 +285,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         $(statsHtml).insertBefore(dataTable.table().container());
                     }
+
+                    // Agregar los event listeners después de inicializar la tabla
+                    $("#analysisTable").on("click", ".ver-detalle", function() {
+                        const codigo = $(this).data("codigo");
+                        showMedicineDetails(codigo, month);
+                    });
+
+                    $("#analysisTable").on("click", ".gestionar", function() {
+                        const codigo = $(this).data("codigo");
+                        const descripcion = $(this).data("descripcion");
+                        gestionarMedicamento(codigo, descripcion);
+                    });
                 }
             });
+
+            // Inicializar tooltips después de que la tabla esté lista
+            $('[data-bs-toggle="tooltip"]').tooltip();
 
         } catch (error) {
             console.error("Error:", error);

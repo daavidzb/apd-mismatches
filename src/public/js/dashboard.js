@@ -72,7 +72,7 @@ async function initializeStateChart() {
         const data = await response.json();
         
         // Ordenar los estados en el orden deseado
-        const ordenEstados = ['Pendiente', 'En proceso', 'Corregido', 'Regularizar'];
+        const ordenEstados = ['Pendiente', 'En proceso', 'Corregido', 'Regularizar', 'Temporal'];
         data.sort((a, b) => ordenEstados.indexOf(a.nombre) - ordenEstados.indexOf(b.nombre));
         
         const options = {
@@ -82,7 +82,7 @@ async function initializeStateChart() {
                 height: 350
             },
             labels: data.map(item => item.nombre),
-            colors: ['#dc3545', '#ffc107', '#198754', '#0dcaf0'], // Rojo (Pendiente), Naranja (En proceso), Verde (Corregido), Azul (Regularizar)
+            colors: ['#dc3545', '#ffc107', '#198754', '#0dcaf0', '#6f42c1'], // Agregado color púrpura para temporales
             title: {
                 text: 'Distribución por Estado',
                 align: 'left',

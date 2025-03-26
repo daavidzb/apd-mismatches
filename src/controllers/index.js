@@ -532,81 +532,77 @@ const get_analysis = async (req, res) => {
     }
 
     const query = `
-    WITH DescuadreTendencias AS (
-        SELECT 
-            d.codigo_med,
-            COUNT(*) as total_apariciones,
-            COUNT(DISTINCT d.descuadre) as valores_unicos,
-            GROUP_CONCAT(DISTINCT d.descuadre ORDER BY d.descuadre) as descuadres,
-            MAX(r.fecha_reporte) as ultima_fecha
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        GROUP BY d.codigo_med
-    ),
-    LastDescuadre AS (
-        SELECT
-            d.codigo_med,
-            d.descripcion,
-            d.descuadre as ultimo_descuadre,
-            r.fecha_reporte,
-            dt.total_apariciones,
-            dt.valores_unicos,
-            dt.descuadres,
-            CASE 
-                WHEN dt.total_apariciones = 1 THEN 'temporal'
-                WHEN dt.total_apariciones >= 2 AND dt.valores_unicos <= 2 THEN 'regular'
-                ELSE 'cambios'
-            END as tipo_patron
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
-        WHERE (d.codigo_med, r.fecha_reporte) IN (
-            SELECT d2.codigo_med, MAX(r2.fecha_reporte)
-            FROM descuadres d2
-            JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
-            ${
-              month !== "all"
-                ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}`
-                : ""
-            }
-            GROUP BY d2.codigo_med
-        )
-    ),
-    GestionInfo AS (
-        SELECT 
-            d.codigo_med,
-            u.nombre as gestionado_por,
-            mg.id_estado,
-            mg.fecha_gestion,
-            CASE 
-                WHEN mg.id_estado = 3 THEN 'Corregido'
-                WHEN mg.id_estado = 2 THEN 'En proceso'
-                WHEN mg.id_estado = 4 THEN 'Regularizar'
-                ELSE 'Pendiente'
-            END as estado_gestion
-        FROM medicamentos_gestionados mg
-        JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
-        JOIN usuarios u ON mg.id_usuario = u.id_usuario
-        WHERE (d.codigo_med, mg.fecha_gestion) IN (
-            SELECT codigo_med, MAX(fecha_gestion)
-            FROM medicamentos_gestionados mg2
-            JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
-            GROUP BY codigo_med
-        )
+WITH DescuadreTendencias AS (
+    SELECT 
+        d.codigo_med,
+        COUNT(*) as total_apariciones,
+        COUNT(DISTINCT d.descuadre) as valores_unicos,
+        MIN(d.descuadre) as min_descuadre,
+        MAX(d.descuadre) as max_descuadre,
+        GROUP_CONCAT(DISTINCT d.descuadre ORDER BY d.descuadre) as descuadres,
+        MAX(r.fecha_reporte) as ultima_fecha
+    FROM descuadres d
+    JOIN reportes r ON d.id_reporte = r.id_reporte
+    GROUP BY d.codigo_med
+),
+LastDescuadre AS (
+    SELECT
+        d.codigo_med,
+        d.descripcion,
+        d.descuadre as ultimo_descuadre,
+        r.fecha_reporte,
+        dt.total_apariciones,
+        dt.valores_unicos,
+        dt.descuadres,
+        CASE 
+            WHEN dt.total_apariciones = 1 THEN 'temporal'
+            WHEN dt.total_apariciones >= 2 AND dt.valores_unicos = 1 THEN 'regular'
+            ELSE 'cambios'
+        END as tipo_patron
+    FROM descuadres d
+    JOIN reportes r ON d.id_reporte = r.id_reporte
+    JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
+    WHERE (d.codigo_med, r.fecha_reporte) IN (
+        SELECT d2.codigo_med, MAX(r2.fecha_reporte)
+        FROM descuadres d2
+        JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
+        ${
+          month !== "all"
+            ? `WHERE YEAR(r2.fecha_reporte) = ${year} AND MONTH(r2.fecha_reporte) = ${m}`
+            : ""
+        }
+        GROUP BY d2.codigo_med
     )
-    SELECT DISTINCT
-        ld.codigo_med,
-        ld.descripcion,
-        ld.ultimo_descuadre,
-        ld.tipo_patron,
-        ld.total_apariciones,
-        ld.descuadres,
-        COALESCE(gi.gestionado_por, NULL) as gestionado_por,
-        COALESCE(gi.estado_gestion, 'Pendiente') as estado_gestion,
-        COALESCE(gi.fecha_gestion, NULL) as fecha_gestion
-    FROM LastDescuadre ld
-    LEFT JOIN GestionInfo gi ON ld.codigo_med = gi.codigo_med
-    ORDER BY ld.descripcion`;
+)
+SELECT DISTINCT
+    ld.codigo_med,
+    ld.descripcion,
+    ld.ultimo_descuadre,
+    ld.tipo_patron,
+    ld.total_apariciones,
+    ld.valores_unicos,
+    ld.descuadres,
+    COALESCE(u.nombre, NULL) as gestionado_por,
+    COALESCE(ed.nombre, 'Pendiente') as estado_gestion,
+    COALESCE(mg.fecha_gestion, NULL) as fecha_gestion
+FROM LastDescuadre ld
+LEFT JOIN medicamentos_gestionados mg ON ld.codigo_med = (
+    SELECT d3.codigo_med 
+    FROM descuadres d3 
+    WHERE d3.id_descuadre = mg.id_descuadre 
+    LIMIT 1
+)
+LEFT JOIN usuarios u ON mg.id_usuario = u.id_usuario
+LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+WHERE (mg.id_gestion IS NULL OR mg.id_gestion = (
+    SELECT mg2.id_gestion
+    FROM medicamentos_gestionados mg2
+    JOIN descuadres d4 ON mg2.id_descuadre = d4.id_descuadre
+    WHERE d4.codigo_med = ld.codigo_med
+    ORDER BY mg2.fecha_gestion DESC
+    LIMIT 1
+))
+ORDER BY ld.descripcion`;
 
     connection.query(query, [], (error, results) => {
       if (error) {
@@ -1110,7 +1106,6 @@ const update_managed_mismatch = async (req, res) => {
 
 const dashboard_view = async (req, res) => {
   try {
-    // Obtener estadísticas
     const stats = await Promise.all([
       // Descuadres de hoy (distinct)
       new Promise((resolve, reject) => {
@@ -1218,9 +1213,29 @@ const dashboard_view = async (req, res) => {
           }
         );
       }),
+      // Agregar contador de temporales
+      new Promise((resolve, reject) => {
+        connection.query(
+          `SELECT COUNT(DISTINCT d.codigo_med) as total
+           FROM descuadres d
+           JOIN reportes r ON d.id_reporte = r.id_reporte
+           WHERE d.codigo_med IN (
+               SELECT d2.codigo_med
+               FROM descuadres d2
+               GROUP BY d2.codigo_med
+               HAVING COUNT(*) = 1
+           )`,
+          (error, results) => {
+            if (error) reject(error);
+            resolve(results[0].total);
+          }
+        );
+      }),
     ]);
 
-    const [hoy, ayer, resueltos, enProceso, total, pendientes] = stats;
+    const [hoy, ayer, resueltos, enProceso, total, pendientes, temporales] =
+      stats;
+
     const hoyVsAyer = ayer ? Math.round(((hoy - ayer) / ayer) * 100) : 0;
     const porcentajeResueltos = total
       ? Math.round((resueltos / total) * 100)
@@ -1246,7 +1261,8 @@ const dashboard_view = async (req, res) => {
         porcentajeEnProceso,
         pendientes,
         porcentajePendientes,
-        total,
+        temporales,
+        total: total - temporales, // Ajustar total excluyendo temporales
       },
     });
   } catch (error) {
