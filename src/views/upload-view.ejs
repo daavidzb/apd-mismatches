@@ -22,29 +22,39 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'upload'}) %>
-    <div class="container mt-5">
-      <!-- <h2 class="text-center">Analizador de Descuadres</h2> -->
-      <form id="uploadForm" class="mt-4" enctype="multipart/form-data">
-        <div class="mb-3">
-          <label for="excelFiles" class="form-label"
-            >Selecciona uno o varios archivos Excel:</label
-          >
-          <input
-            type="file"
-            class="form-control"
-            id="excelFiles"
-            name="files"
-            accept=".xls,.xlsx"
-            multiple
-            required
-          />
+    <div class="container my-4">
+      <div class="row">
+        <div class="col-md-6 mx-auto">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title mb-4">
+                <i class="bi bi-cloud-upload me-2"></i>
+                Subir archivos de descuadres
+              </h5>
+              <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                  <label for="fileInput" class="form-label">
+                    Seleccione los archivos Excel (.xlsx, .xls)
+                  </label>
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="fileInput"
+                    name="files"
+                    accept=".xlsx,.xls"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="bi bi-upload me-2"></i>
+                  Subir archivos
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
-        <div id="fileList" class="file-preview"></div>
-        <button type="submit" class="btn btn-primary w-100 mt-4">
-          Subir Archivos
-        </button>
-      </form>
-      <div id="uploadStatus" class="mt-3 text-center"></div>
+      </div>
+      <div id="uploadResults" class="mt-4"></div>
     </div>
     <%- include('partials/footer') %>
     <script src="/public/js/upload.js"></script>

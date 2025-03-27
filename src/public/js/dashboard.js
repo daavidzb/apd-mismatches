@@ -1,190 +1,228 @@
-document.addEventListener('DOMContentLoaded', async function() {
-    await initializeTrendChart();
-    await initializeStateChart();
+document.addEventListener("DOMContentLoaded", function () {
+  // Cargar gráficos en paralelo
+  Promise.all([initializeTrendChart(), initializeStateChart()]).catch(
+    (error) => {
+      console.error("Error al cargar los gráficos:", error);
+    }
+  );
 });
 
 async function initializeTrendChart() {
-    try {
-        const response = await fetch('/api/dashboard/trend');
-        const data = await response.json();
+  try {
+    const response = await fetch("/api/dashboard/trend");
+    const data = await response.json();
 
-        const options = {
-            series: [{
-                name: 'Descuadres',
-                data: data.map(item => ({
-                    x: new Date(item.fecha).getTime(),
-                    y: item.total
-                }))
-            }],
-            chart: {
-                type: 'area',
-                height: 400,
-                toolbar: {
-                    show: true
-                }
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'smooth'
-            },
-            xaxis: {
-                type: 'datetime',
-                labels: {
-                    formatter: function(val) {
-                        return new Date(val).toLocaleDateString('es-ES');
-                    }
-                }
-            },
-            yaxis: {
-                labels: {
-                    formatter: function(val) {
-                        return Math.round(val);
-                    }
-                }
-            },
-            title: {
-                text: 'Tendencia de Descuadres (Últimos 30 días)',
-                align: 'left'
-            },
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.7,
-                    opacityTo: 0.9,
-                    stops: [0, 100]
-                }
-            }
-        };
+    const options = {
+      series: [
+        {
+          name: "Descuadres",
+          data: data.map((item) => ({
+            x: new Date(item.fecha).getTime(),
+            y: item.total,
+          })),
+        },
+      ],
+      chart: {
+        type: "area",
+        height: 400,
+        toolbar: {
+          show: true,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      stroke: {
+        curve: "smooth",
+      },
+      xaxis: {
+        type: "datetime",
+        labels: {
+          formatter: function (val) {
+            return new Date(val).toLocaleDateString("es-ES");
+          },
+        },
+      },
+      yaxis: {
+        labels: {
+          formatter: function (val) {
+            return Math.round(val);
+          },
+        },
+      },
+      title: {
+        text: "Tendencia de Descuadres (Últimos 30 días)",
+        align: "left",
+      },
+      fill: {
+        type: "gradient",
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.7,
+          opacityTo: 0.9,
+          stops: [0, 100],
+        },
+      },
+    };
 
-        const chart = new ApexCharts(document.querySelector("#trendChart"), options);
-        chart.render();
-    } catch (error) {
-        console.error('Error:', error);
-    }
+    const chart = new ApexCharts(
+      document.querySelector("#trendChart"),
+      options
+    );
+    chart.render();
+  } catch (error) {
+    console.error("Error:", error);
+  }
 }
 
 async function initializeStateChart() {
-    try {
-        const response = await fetch('/api/dashboard/states');
-        const data = await response.json();
-        
-        // Ordenar los estados en el orden deseado
-        const ordenEstados = ['Pendiente', 'En proceso', 'Corregido', 'Regularizar', 'Temporal'];
-        data.sort((a, b) => ordenEstados.indexOf(a.nombre) - ordenEstados.indexOf(b.nombre));
-        
-        const options = {
-            series: data.map(item => item.total),
+  try {
+    const response = await fetch("/api/dashboard/states");
+    const data = await response.json();
+
+    // Configuración simplificada con los estados exactos de la API
+    const estadosConfig = [
+      { nombre: "Pendiente", color: "#dc3545" }, // Rojo
+      { nombre: "En proceso", color: "#ffc107" }, // Amarillo
+      { nombre: "Resuelto", color: "#198754" }, // Verde
+      { nombre: "Temporal", color: "#6f42c1" }, // Morado
+    ];
+
+    // Mantener los datos tal como vienen de la API
+    const datosOrdenados = data
+      .map((item) => {
+        const config = estadosConfig.find((c) => c.nombre === item.nombre);
+        return {
+          ...item,
+          color: config?.color || "#dc3545", // Usar rojo como color por defecto
+        };
+      })
+      .sort((a, b) => {
+        const orden = {
+          Pendientes: 1,
+          "En Proceso": 2,
+          Resuelto: 3,
+          Temporal: 4,
+        };
+        return (orden[a.nombre] || 99) - (orden[b.nombre] || 99);
+      });
+
+    const options = {
+      series: datosOrdenados.map((item) => item.total),
+      chart: {
+        type: "donut",
+        height: 350,
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      },
+      labels: datosOrdenados.map((item) => item.nombre),
+      colors: datosOrdenados.map((item) => item.color),
+      title: {
+        text: "Distribución por Estado",
+        align: "left",
+        style: {
+          fontSize: "16px",
+          fontWeight: "500",
+        },
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "70%",
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: "Total",
+                formatter: function (w) {
+                  return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                },
+              },
+            },
+          },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: function (val, opts) {
+          const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+          const value = opts.w.globals.series[opts.seriesIndex];
+          const percentage = Math.round((value * 100) / total);
+          return `${value} (${percentage}%)`;
+        },
+      },
+      legend: {
+        position: "bottom",
+        formatter: function (seriesName, opts) {
+          const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+          const value = opts.w.globals.series[opts.seriesIndex];
+          const percentage = Math.round((value * 100) / total);
+          return `${seriesName}: ${value} (${percentage}%)`;
+        },
+      },
+      tooltip: {
+        y: {
+          formatter: function (value) {
+            return `${value} medicamentos`;
+          },
+        },
+      },
+      responsive: [
+        {
+          breakpoint: 480,
+          options: {
             chart: {
-                type: 'donut',
-                height: 350
-            },
-            labels: data.map(item => item.nombre),
-            colors: ['#dc3545', '#ffc107', '#198754', '#0dcaf0', '#6f42c1'], // Agregado color púrpura para temporales
-            title: {
-                text: 'Distribución por Estado',
-                align: 'left',
-                style: {
-                    fontSize: '16px'
-                }
-            },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: '70%',
-                        labels: {
-                            show: true,
-                            total: {
-                                show: true,
-                                label: 'Total',
-                                formatter: function (w) {
-                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            dataLabels: {
-                enabled: true,
-                formatter: function (val, opts) {
-                    return opts.w.config.series[opts.seriesIndex] + ' (' + Math.round(val) + '%)';
-                }
+              height: 300,
             },
             legend: {
-                position: 'bottom',
-                formatter: function(seriesName, opts) {
-                    return seriesName + ' - ' + opts.w.globals.series[opts.seriesIndex];
-                }
-            }
-        };
+              position: "bottom",
+            },
+          },
+        },
+      ],
+    };
 
-        const chart = new ApexCharts(document.querySelector("#stateChart"), options);
-        chart.render();
+    // Limpiar contenedor existente
+    document.querySelector("#stateChart").innerHTML = "";
 
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-function initStateDistribution() {
-    fetch('/api/state-distribution')
-        .then(response => response.json())
-        .then(data => {
-            const options = {
-                series: data.map(item => item.total),
-                labels: data.map(item => item.nombre),
-                chart: {
-                    type: 'donut',
-                    height: 400
-                },
-                colors: ['#dc3545', '#ffc107', '#28a745'], // Rojo, Naranja, Verde
-                legend: {
-                    position: 'bottom'
-                },
-                plotOptions: {
-                    pie: {
-                        donut: {
-                            size: '70%'
-                        }
-                    }
-                }
-            };
-
-            const chart = new ApexCharts(document.querySelector("#stateChart"), options);
-            chart.render();
-        });
+    // Renderizar nuevo gráfico
+    const chart = new ApexCharts(
+      document.querySelector("#stateChart"),
+      options
+    );
+    await chart.render();
+  } catch (error) {
+    console.error("Error al cargar distribución de estados:", error);
+  }
 }
 
 const dataTableEsES = {
-    "decimal": "",
-    "emptyTable": "No hay datos disponibles",
-    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
-    "infoEmpty": "Mostrando 0 a 0 de 0 registros",
-    "infoFiltered": "(filtrado de _MAX_ registros totales)",
-    "infoPostFix": "",
-    "thousands": ",",
-    "lengthMenu": "Mostrar _MENU_ registros",
-    "loadingRecords": "Cargando...",
-    "processing": "Procesando...",
-    "search": "Buscar:",
-    "zeroRecords": "No se encontraron coincidencias",
-    "paginate": {
-        "first": "Primero",
-        "last": "Último",
-        "next": "Siguiente",
-        "previous": "Anterior"
-    },
-    "aria": {
-        "sortAscending": ": activar para ordenar ascendentemente",
-        "sortDescending": ": activar para ordenar descendentemente"
-    }
+  decimal: "",
+  emptyTable: "No hay datos disponibles",
+  info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+  infoEmpty: "Mostrando 0 a 0 de 0 registros",
+  infoFiltered: "(filtrado de _MAX_ registros totales)",
+  infoPostFix: "",
+  thousands: ",",
+  lengthMenu: "Mostrar _MENU_ registros",
+  loadingRecords: "Cargando...",
+  processing: "Procesando...",
+  search: "Buscar:",
+  zeroRecords: "No se encontraron coincidencias",
+  paginate: {
+    first: "Primero",
+    last: "Último",
+    next: "Siguiente",
+    previous: "Anterior",
+  },
+  aria: {
+    sortAscending: ": activar para ordenar ascendentemente",
+    sortDescending: ": activar para ordenar descendentemente",
+  },
 };
 
 // Y usar en las inicializaciones de DataTables:
-$('#miTabla').DataTable({
-    language: dataTableEsES,
-    // ... resto de opciones
+$("#miTabla").DataTable({
+  language: dataTableEsES,
+  // ... resto de opciones
 });

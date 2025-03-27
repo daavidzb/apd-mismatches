@@ -1,78 +1,104 @@
+// Configuración de idioma para DataTables
+const dataTableEsES = {
+    "decimal": "",
+    "emptyTable": "No hay datos disponibles",
+    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+    "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+    "infoFiltered": "(filtrado de _MAX_ registros totales)",
+    "infoPostFix": "",
+    "thousands": ",",
+    "lengthMenu": "Mostrar _MENU_ registros",
+    "loadingRecords": "Cargando...",
+    "processing": "Procesando...",
+    "search": "Buscar:",
+    "zeroRecords": "No se encontraron coincidencias",
+    "paginate": {
+        "first": "Primero",
+        "last": "Último",
+        "next": "Siguiente",
+        "previous": "Anterior"
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
-    let tables = {};
-
-    const dataTableEsES = {
-        "decimal": "",
-        "emptyTable": "No hay datos disponibles",
-        "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
-        "infoEmpty": "Mostrando 0 a 0 de 0 registros",
-        "infoFiltered": "(filtrado de _MAX_ registros totales)",
-        "infoPostFix": "",
-        "thousands": ",",
-        "lengthMenu": "Mostrar _MENU_ registros",
-        "loadingRecords": "Cargando...",
-        "processing": "Procesando...",
-        "search": "Buscar:",
-        "zeroRecords": "No se encontraron coincidencias",
-        "paginate": {
-            "first": "Primero",
-            "last": "Último",
-            "next": "Siguiente",
-            "previous": "Anterior"
-        },
-        "aria": {
-            "sortAscending": ": activar para ordenar ascendentemente",
-            "sortDescending": ": activar para ordenar descendentemente"
-        }
-    };
-
+    // Configuración base para todas las tablas
     const configBase = {
         language: dataTableEsES,
         processing: true,
         pageLength: 10,
         responsive: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+        scrollX: false,
+        autoWidth: false,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+        drawCallback: function() {
+            // Reinicializar tooltips después de cada redibujado
+            const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(tooltip => {
+                new bootstrap.Tooltip(tooltip);
+            });
+        }
     };
 
+    // Columnas base para todas las tablas
     const columnasBase = [
-        { data: 'codigo_med', title: 'Código' },
-        { data: 'descripcion', title: 'Descripción' },
         { 
-            data: 'descuadre',
-            title: 'Último Descuadre',
+            data: 'codigo_med', 
+            title: 'Código',
+            width: '10%'
+        },
+        { 
+            data: 'descripcion', 
+            title: 'Descripción',
+            width: '35%',
             render: function(data) {
-                return `<span class="${data < 0 ? 'text-danger' : 'text-success'}">${data || 0}</span>`;
+                // Solo acortar la descripción en la tabla
+                const shortDesc = data.length > 30 ? data.substring(0, 30) + '...' : data;
+                return `<span title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
             }
+        },
+        { 
+            data: 'categoria', 
+            title: 'Categoría',
+            width: '20%'
         },
         {
             data: 'fecha_gestion',
-            title: 'Fecha gestión',
+            title: 'Última gestión',
+            width: '20%',
             render: function(data) {
-                return data ? new Date(data).toLocaleString('es-ES') : '-';
+                return data ? new Date(data).toLocaleString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }) : 'N/A';
             }
         },
         {
             data: null,
             title: 'Acciones',
+            width: '15%',
             className: 'text-center',
             render: function(data) {
                 return `
-                    <div class="btn-group">
-                        <button class="btn btn-primary btn-sm ver-detalle" 
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-sm ver-detalle"
                                 data-codigo="${data.codigo_med}"
                                 title="Ver detalles">
-                            <i class="bi bi-info-circle"></i> Detalles
+                            <i class="bi bi-info-circle"></i>
                         </button>
-                        <button class="btn btn-success btn-sm ms-2 gestionar" 
+                        <button class="btn btn-outline-success btn-sm gestionar"
                                 data-codigo="${data.codigo_med}"
                                 data-descripcion="${data.descripcion}"
                                 title="Gestionar">
-                            <i class="bi bi-pencil-square"></i> Gestionar
+                            <i class="bi bi-pencil-square"></i>
                         </button>
                     </div>`;
             }
         }
     ];
+
+    // Objeto para almacenar las instancias de las tablas
+    const tables = {};
 
     // Función para inicializar tabla
     function initTable(tabId, status) {
@@ -84,15 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
             ...configBase,
             ajax: {
                 url: `/api/managed/${status}`,
-                dataSrc: 'managed',
-                error: function(xhr, error, thrown) {
-                    console.error('Error:', error);
-                }
+                dataSrc: 'managed'
             },
             columns: columnasBase
         });
 
-        // Agregar event listeners
+        // Event listeners para los botones de cada tabla
         $(`#${tabId}`).on('click', '.ver-detalle', function() {
             const codigo = $(this).data('codigo');
             showMedicineDetails(codigo);
@@ -105,46 +128,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Inicializar tablas
+    // Inicializar todas las tablas
     const tablesToInit = [
-        { id: 'tablaPendientes', status: 1 },
-        { id: 'tablaEnProceso', status: 2 },
-        { id: 'tablaGestionados', status: 3 }
+        { id: 'tablaEnProceso', status: 2, title: 'En Seguimiento' },
+        { id: 'tablaGestionados', status: 3, title: 'Resueltos' }
     ];
 
     tablesToInit.forEach(table => {
         initTable(table.id, table.status);
     });
 
-    // Manejar cambios de pestaña
-    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
-        const target = $(e.target).attr('data-bs-target').substring(1);
-        const tableMap = {
-            'descuadres': 'tablaPendientes',
-            'enProceso': 'tablaEnProceso',
-            'gestionados': 'tablaGestionados'
-        };
-        
-        const tableId = tableMap[target];
-        if (tables[tableId]) {
-            tables[tableId].ajax.reload();
-        }
-    });
-});
+    // Cargar categorías para el filtro
+    loadCategorias();
 
-const tablaPendientes = $('#tablaPendientes').DataTable({
-    language: dataTableEsES,
-    // ... rest of config
-});
-
-const tablaEnProceso = $('#tablaEnProceso').DataTable({
-    language: dataTableEsES,
-    // ... rest of config
-});
-
-const tablaGestionados = $('#tablaGestionados').DataTable({
-    language: dataTableEsES,
-    // ... rest of config
+    // Event listener para filtro de categorías
+    const categoriaFilter = document.getElementById('categoriaFilter');
+    if (categoriaFilter) {
+        categoriaFilter.addEventListener('change', function() {
+            const categoria = this.value;
+            Object.values(tables).forEach(table => {
+                table.column(3).search(categoria).draw();
+            });
+        });
+    }
 });
 
 // Función para gestionar descuadre
@@ -414,4 +420,45 @@ async function actualizarEstado(id, nuevoEstado) {
         console.error("Error:", error);
         showNotification('error', 'Error al actualizar el estado');
     }
+}
+
+// Cargar categorías para el filtro
+async function loadCategorias() {
+    try {
+        const response = await fetch('/api/categorias');
+        if (!response.ok) {
+            throw new Error('Error al obtener categorías');
+        }
+        const data = await response.json();
+        const select = document.getElementById('categoriaFilter');
+        
+        if (!select) {
+            console.error('Elemento categoriaFilter no encontrado');
+            return;
+        }
+        
+        // Limpiar opciones existentes
+        select.innerHTML = '<option value="">Todas las categorías</option>';
+        
+        // Agregar nuevas opciones
+        if (data.categorias && Array.isArray(data.categorias)) {
+            data.categorias.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.nombre;
+                option.textContent = cat.nombre;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error al cargar categorías: ' + error.message);
+    }
+}
+
+// Aplicar filtro por categoría
+function aplicarFiltroCategorias() {
+    const categoria = document.getElementById('categoriaFilter').value;
+    Object.values(tables).forEach(table => {
+        table.column(3).search(categoria).draw();
+    });
 }

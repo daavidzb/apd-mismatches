@@ -64,82 +64,113 @@ const mismatches_view = async (req, res) => {
 
 const get_month_report = async (req, res) => {
   try {
-    const [year, month] = req.params.month.split("-");
-    const results = await new Promise((resolve, reject) => {
-      connection.query(
-        `
-        SELECT 
-          DATE(fecha_reporte) as fecha, 
-          COUNT(*) as total
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        WHERE YEAR(fecha_reporte) = ? AND MONTH(fecha_reporte) = ?
-        GROUP BY DATE(fecha_reporte)
-        ORDER BY fecha_reporte
-        `,
-        [year, month],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
-        }
-      );
-    });
+      const month = req.params.month;
 
-    // fechas en formato ISO
-    const formattedResults = results.map((row) => ({
-      ...row,
-      fecha: row.fecha.toISOString().split("T")[0],
-      total: parseInt(row.total),
-    }));
+      // Si el mes es 'all', obtener datos de todos los períodos
+      const query = month === 'all' ? 
+          `WITH DescuadresPorMes AS (
+              SELECT 
+                  DATE_FORMAT(r.fecha_reporte, '%Y-%m') as mes,
+                  COUNT(DISTINCT d.codigo_med) as total_descuadres,
+                  COUNT(DISTINCT CASE WHEN mg.id_estado = 3 THEN d.codigo_med END) as resueltos,
+                  COUNT(DISTINCT CASE WHEN mg.id_estado = 2 THEN d.codigo_med END) as en_proceso,
+                  COUNT(DISTINCT CASE WHEN mg.id_estado = 1 OR mg.id_estado IS NULL THEN d.codigo_med END) as pendientes
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+              GROUP BY DATE_FORMAT(r.fecha_reporte, '%Y-%m')
+          )
+          SELECT 
+              SUM(total_descuadres) as total,
+              SUM(resueltos) as resueltos,
+              SUM(en_proceso) as en_proceso,
+              SUM(pendientes) as pendientes
+          FROM DescuadresPorMes` :
+          `SELECT 
+              COUNT(DISTINCT d.codigo_med) as total,
+              COUNT(DISTINCT CASE WHEN mg.id_estado = 3 THEN d.codigo_med END) as resueltos,
+              COUNT(DISTINCT CASE WHEN mg.id_estado = 2 THEN d.codigo_med END) as en_proceso,
+              COUNT(DISTINCT CASE WHEN mg.id_estado = 1 OR mg.id_estado IS NULL THEN d.codigo_med END) as pendientes
+          FROM descuadres d
+          JOIN reportes r ON d.id_reporte = r.id_reporte
+          LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+          WHERE DATE_FORMAT(r.fecha_reporte, '%Y-%m') = ?`;
 
-    res.json({ daily: formattedResults });
+      const params = month === 'all' ? [] : [month];
+
+      const results = await new Promise((resolve, reject) => {
+          connection.query(query, params, (error, results) => {
+              if (error) reject(error);
+              resolve(results[0]);
+          });
+      });
+
+      res.json(results);
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: error.message });
+      console.error("Error:", error);
+      res.status(500).json({ error: error.message });
   }
 };
 
 const get_top_medicines = async (req, res) => {
   try {
-    const [year, month] = req.params.month.split("-");
-    console.log(`Fetching top medicines for ${year}-${month}`); // Debug log
+      const month = req.params.month;
+      
+      // Query base para todos los períodos o un mes específico
+      const query = month === 'all' ? 
+          `WITH MedicineStats AS (
+              SELECT 
+                  d.codigo_med,
+                  d.descripcion,
+                  COUNT(*) as dias_con_descuadre,
+                  MIN(d.descuadre) as min_descuadre,
+                  MAX(d.descuadre) as max_descuadre,
+                  AVG(ABS(d.descuadre)) as promedio_descuadre,
+                  COUNT(DISTINCT DATE(r.fecha_reporte)) as total_dias_mes
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              GROUP BY d.codigo_med, d.descripcion
+              ORDER BY dias_con_descuadre DESC
+              LIMIT 10
+          )
+          SELECT *
+          FROM MedicineStats` :
+          `WITH MedicineStats AS (
+              SELECT 
+                  d.codigo_med,
+                  d.descripcion,
+                  COUNT(*) as dias_con_descuadre,
+                  MIN(d.descuadre) as min_descuadre,
+                  MAX(d.descuadre) as max_descuadre,
+                  AVG(ABS(d.descuadre)) as promedio_descuadre,
+                  (
+                      SELECT COUNT(DISTINCT DATE(r2.fecha_reporte))
+                      FROM reportes r2
+                      WHERE DATE_FORMAT(r2.fecha_reporte, '%Y-%m') = ?
+                  ) as total_dias_mes
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              WHERE DATE_FORMAT(r.fecha_reporte, '%Y-%m') = ?
+              GROUP BY d.codigo_med, d.descripcion
+              ORDER BY dias_con_descuadre DESC
+              LIMIT 10
+          )
+          SELECT *
+          FROM MedicineStats`;
 
-    const results = await new Promise((resolve, reject) => {
-      connection.query(
-        `
-        SELECT 
-          d.codigo_med,
-          d.descripcion,
-          COUNT(*) as total_descuadres,
-          COUNT(*) * 100.0 / (
-            SELECT COUNT(*)
-            FROM descuadres d2
-            JOIN reportes r2 ON d2.id_reporte = r2.id_reporte
-            WHERE YEAR(r2.fecha_reporte) = ? AND MONTH(r2.fecha_reporte) = ?
-          ) as frecuencia
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?
-        GROUP BY d.codigo_med, d.descripcion
-        ORDER BY total_descuadres DESC
-        LIMIT 10
-        `,
-        [year, month, year, month],
-        (error, results) => {
-          if (error) {
-            console.error("Database error:", error);
-            reject(error);
-          }
-          resolve(results);
-        }
-      );
-    });
+      const params = month === 'all' ? [] : [month, month];
 
-    console.log(`Found ${results.length} results`); // Debug log
-    res.json({ medicines: results });
+      const results = await new Promise((resolve, reject) => {
+          connection.query(query, params, (error, results) => {
+              if (error) reject(error);
+              resolve(results);
+          });
+      });
+
+      res.json({ medicines: results });
   } catch (error) {
-    console.error("Error in get_top_medicines:", error);
-    res.status(500).json({ error: error.message });
+      console.error("Error:", error);
+      res.status(500).json({ error: error.message });
   }
 };
 
@@ -307,37 +338,54 @@ const get_compare_months = async (req, res) => {
 
 const upload_excel = async (req, res) => {
   try {
+    console.log("1. Iniciando proceso de subida de archivo");
+
     const upload = multer({
       storage: multer.diskStorage({
         destination: (req, file, callback) => {
+          console.log("2. Archivo recibido:", file.originalname);
+          console.log("   Mimetype:", file.mimetype);
           callback(null, "./src/public/uploads/excel");
         },
         filename: (req, file, callback) => {
+          console.log("3. Guardando archivo como:", file.originalname);
           callback(null, file.originalname);
         },
       }),
       fileFilter: (req, file, callback) => {
         let ext = path.extname(file.originalname);
+        console.log("4. Validando extensión:", ext);
+        console.log("   Tipo MIME:", file.mimetype);
+
         if (ext !== ".xlsx" && ext !== ".xls") {
+          console.log("   ❌ Extensión no válida");
           return callback(
             new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"),
             false
           );
         }
+        console.log("   ✅ Extensión válida");
         callback(null, true);
       },
     }).array("files");
 
     upload(req, res, async (error) => {
       if (error) {
-        console.error(error);
+        console.error("5. ❌ Error en upload:", error.message);
         return res.status(400).json({ error: error.message });
       }
+
+      console.log("5. ✅ Archivos subidos correctamente");
+      console.log("   Cantidad de archivos:", req.files?.length);
 
       const results = [];
 
       for (const file of req.files) {
         try {
+          console.log("\n6. Procesando archivo:", file.originalname);
+          console.log("   Path:", file.path);
+          console.log("   Size:", file.size, "bytes");
+
           // Extraer fecha del nombre del archivo
           const dateMatch = file.originalname.match(
             /APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/
@@ -489,8 +537,10 @@ const upload_excel = async (req, res) => {
             medicamentosValidos: validMedicines.length,
             medicamentosInvalidos: invalidMedicines,
           });
+
+          console.log("7. ✅ Archivo procesado correctamente");
         } catch (error) {
-          console.error(`Error processing file ${file.originalname}:`, error);
+          console.error("7. ❌ Error procesando archivo:", error.message);
           results.push({
             filename: file.originalname,
             error: true,
@@ -500,10 +550,11 @@ const upload_excel = async (req, res) => {
         }
       }
 
+      console.log("8. Proceso completado");
       res.json({ success: true, results });
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error general:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -943,6 +994,7 @@ const managed_view = async (req, res) => {
     res.render("managed", {
       title: "Gestionar Descuadres",
       active: "managed",
+      user: req.user,
     });
   } catch (error) {
     console.error("Error:", error);
@@ -953,43 +1005,42 @@ const managed_view = async (req, res) => {
 const get_managed_mismatches = async (req, res) => {
   try {
     const { status } = req.params;
-
     const query = `
-      SELECT DISTINCT
-        d.codigo_med,
-        d.descripcion,
-        d.descuadre,
-        mg.fecha_gestion,
-        u.nombre as usuario,
-        ed.nombre as estado,
-        cd.nombre as categoria,
-        md.nombre as motivo,
-        mg.observaciones,
-        ed.color as estado_color
-      FROM medicamentos_gestionados mg
-      JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
-      JOIN usuarios u ON mg.id_usuario = u.id_usuario
-      JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
-      LEFT JOIN categorias_descuadre cd ON mg.id_categoria = cd.id_categoria
-      LEFT JOIN motivos_descuadre md ON mg.id_motivo = md.id_motivo
-      WHERE mg.id_estado = ?
-      ORDER BY mg.fecha_gestion DESC`;
+          SELECT DISTINCT
+              d.codigo_med,
+              d.descripcion,
+              d.descuadre as ultimo_descuadre,
+              mg.fecha_gestion,
+              u.nombre as usuario,
+              ed.nombre as estado,
+              cd.nombre as categoria,
+              md.nombre as motivo,
+              mg.observaciones,
+              ed.color as estado_color
+          FROM descuadres d
+          JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+          JOIN usuarios u ON mg.id_usuario = u.id_usuario
+          JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+          LEFT JOIN categorias_descuadre cd ON mg.id_categoria = cd.id_categoria
+          LEFT JOIN motivos_descuadre md ON mg.id_motivo = md.id_motivo
+          WHERE mg.id_gestion = (
+              SELECT MAX(mg2.id_gestion)
+              FROM medicamentos_gestionados mg2
+              JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
+              WHERE d2.codigo_med = d.codigo_med
+          )
+          AND mg.id_estado = ?
+          ORDER BY mg.fecha_gestion DESC`;
 
     connection.query(query, [status], (error, results) => {
-      if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ error: error.message });
-      }
-
-      // Si no hay resultados, devolver array vacío en lugar de error
-      res.json({ managed: results || [] });
+      if (error) throw error;
+      res.json({ managed: results });
     });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
 const get_managed_details = async (req, res) => {
   try {
     const { codigo } = req.params;
@@ -1107,198 +1158,95 @@ const update_managed_mismatch = async (req, res) => {
 const dashboard_view = async (req, res) => {
   try {
     const stats = await Promise.all([
-      // Descuadres de hoy (distinct)
+      // Descuadres de hoy
       new Promise((resolve, reject) => {
         connection.query(
-          `SELECT COUNT(DISTINCT d.codigo_med) as total 
-           FROM descuadres d 
-           JOIN reportes r ON d.id_reporte = r.id_reporte 
-           WHERE DATE(r.fecha_reporte) = CURDATE()`,
-          (error, results) => {
-            if (error) reject(error);
-            resolve(results[0].total);
-          }
-        );
-      }),
-      // Descuadres de ayer (distinct)
-      new Promise((resolve, reject) => {
-        connection.query(
-          `SELECT COUNT(DISTINCT d.codigo_med) as total 
-           FROM descuadres d 
-           JOIN reportes r ON d.id_reporte = r.id_reporte 
-           WHERE DATE(r.fecha_reporte) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`,
-          (error, results) => {
-            if (error) reject(error);
-            resolve(results[0].total);
-          }
-        );
-      }),
-      // Resueltos (último estado)
-      new Promise((resolve, reject) => {
-        connection.query(
-          `WITH DescuadreTendencias AS (
-          SELECT 
-              d.codigo_med,
-              COUNT(*) as total_apariciones
+          `
+          SELECT COUNT(DISTINCT d.codigo_med) as total
           FROM descuadres d
-          GROUP BY d.codigo_med
-      ),
-      UltimosEstados AS (
-          SELECT 
-              d.codigo_med,
-              CASE 
-                  WHEN dt.total_apariciones = 1 THEN 'Temporal'
-                  WHEN mg.id_estado IS NULL THEN 'Pendiente'
-                  ELSE ed.nombre 
-              END as estado
-          FROM descuadres d
-          JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
-          LEFT JOIN (
-              SELECT d2.codigo_med, mg.id_estado
-              FROM medicamentos_gestionados mg
-              JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
-              WHERE mg.id_gestion = (
-                  SELECT MAX(mg2.id_gestion)
-                  FROM medicamentos_gestionados mg2
-                  JOIN descuadres d3 ON mg2.id_descuadre = d3.id_descuadre
-                  WHERE d3.codigo_med = d2.codigo_med
-              )
-          ) mg ON d.codigo_med = mg.codigo_med
-          LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
-          WHERE (d.codigo_med, d.id_descuadre) IN (
-              SELECT codigo_med, MAX(id_descuadre)
-              FROM descuadres
-              GROUP BY codigo_med
-          )
-      )
-      SELECT COUNT(*) as total
-      FROM UltimosEstados
-      WHERE estado = 'Corregido'`,
+          JOIN reportes r ON d.id_reporte = r.id_reporte
+          WHERE DATE(r.fecha_reporte) = CURDATE()`,
           (error, results) => {
             if (error) reject(error);
-            resolve(results[0].total);
+            resolve(results?.[0]?.total || 0);
           }
         );
       }),
 
-      // En proceso (último estado)
+      // Descuadres de ayer
       new Promise((resolve, reject) => {
         connection.query(
-          `WITH DescuadreTendencias AS (
-          SELECT 
-              d.codigo_med,
-              COUNT(*) as total_apariciones
+          `
+          SELECT COUNT(DISTINCT d.codigo_med) as total
           FROM descuadres d
-          GROUP BY d.codigo_med
-      ),
-      UltimosEstados AS (
-          SELECT 
-              d.codigo_med,
-              CASE 
-                  WHEN dt.total_apariciones = 1 THEN 'Temporal'
-                  WHEN mg.id_estado IS NULL THEN 'Pendiente'
-                  ELSE ed.nombre 
-              END as estado
-          FROM descuadres d
-          JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
-          LEFT JOIN (
-              SELECT d2.codigo_med, mg.id_estado
-              FROM medicamentos_gestionados mg
-              JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
-              WHERE mg.id_gestion = (
-                  SELECT MAX(mg2.id_gestion)
-                  FROM medicamentos_gestionados mg2
-                  JOIN descuadres d3 ON mg2.id_descuadre = d3.id_descuadre
-                  WHERE d3.codigo_med = d2.codigo_med
-              )
-          ) mg ON d.codigo_med = mg.codigo_med
-          LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
-          WHERE (d.codigo_med, d.id_descuadre) IN (
-              SELECT codigo_med, MAX(id_descuadre)
-              FROM descuadres
-              GROUP BY codigo_med
-          )
-      )
-      SELECT COUNT(*) as total
-      FROM UltimosEstados
-      WHERE estado = 'En proceso'`,
+          JOIN reportes r ON d.id_reporte = r.id_reporte
+          WHERE DATE(r.fecha_reporte) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`,
           (error, results) => {
             if (error) reject(error);
-            resolve(results[0].total);
+            resolve(results?.[0]?.total || 0);
           }
         );
       }),
 
-      // Total (todos los medicamentos distintos)
+      // Estados actuales (una sola consulta para todos los estados)
       new Promise((resolve, reject) => {
         connection.query(
-          `SELECT COUNT(DISTINCT codigo_med) as total 
-             FROM descuadres`,
+          `
+    WITH UltimaGestion AS (
+      SELECT 
+        d.codigo_med,
+        mg.id_estado,
+        COUNT(*) OVER (PARTITION BY d.codigo_med) as apariciones,
+        ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
+      FROM descuadres d
+      LEFT JOIN (
+        SELECT d2.codigo_med, mg.id_estado, mg.fecha_gestion
+        FROM medicamentos_gestionados mg
+        JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
+        WHERE mg.id_gestion = (
+          SELECT MAX(mg2.id_gestion)
+          FROM medicamentos_gestionados mg2
+          WHERE mg2.id_descuadre = d2.id_descuadre
+        )
+      ) mg ON d.codigo_med = mg.codigo_med
+    )
+    SELECT
+      SUM(CASE WHEN id_estado = 3 THEN 1 ELSE 0 END) as resueltos,
+      SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) as en_proceso,
+      SUM(CASE WHEN (id_estado = 1 OR id_estado IS NULL) AND apariciones > 1 THEN 1 ELSE 0 END) as pendientes,
+      SUM(CASE WHEN id_estado IS NULL AND apariciones = 1 THEN 1 ELSE 0 END) as temporales,
+      COUNT(DISTINCT codigo_med) as total
+    FROM UltimaGestion
+    WHERE rn = 1`,
           (error, results) => {
             if (error) reject(error);
-            resolve(results[0].total);
-          }
-        );
-      }),
-
-      // Pendientes (no temporales y sin gestión)
-      new Promise((resolve, reject) => {
-        connection.query(
-          `SELECT COUNT(DISTINCT d.codigo_med) as total
-           FROM descuadres d
-           WHERE d.codigo_med IN (
-               SELECT d2.codigo_med
-               FROM descuadres d2
-               GROUP BY d2.codigo_med
-               HAVING COUNT(*) > 1  -- No son temporales
-           )
-           AND d.codigo_med NOT IN (
-               SELECT DISTINCT d3.codigo_med
-               FROM descuadres d3
-               JOIN medicamentos_gestionados mg ON d3.id_descuadre = mg.id_descuadre
-               WHERE mg.id_gestion = (
-                   SELECT MAX(mg2.id_gestion)
-                   FROM medicamentos_gestionados mg2
-                   JOIN descuadres d4 ON mg2.id_descuadre = d4.id_descuadre
-                   WHERE d4.codigo_med = d3.codigo_med
-               )
-           )`,
-          (error, results) => {
-            if (error) reject(error);
-            resolve(results[0].total);
-          }
-        );
-      }),
-
-      // Temporales (aparecen una sola vez)
-      new Promise((resolve, reject) => {
-        connection.query(
-          `SELECT COUNT(*) as total
-             FROM (
-                 SELECT codigo_med
-                 FROM descuadres
-                 GROUP BY codigo_med
-                 HAVING COUNT(*) = 1
-             ) temp`,
-          (error, results) => {
-            if (error) reject(error);
-            resolve(results[0].total);
+            const defaultStats = {
+              resueltos: 0,
+              en_proceso: 0,
+              pendientes: 0,
+              temporales: 0,
+              total: 0,
+            };
+            resolve(results?.[0] || defaultStats);
           }
         );
       }),
     ]);
 
-    const [hoy, ayer, resueltos, enProceso, total, pendientes, temporales] =
-      stats;
+    const [hoy, ayer, estadosData] = stats;
+    const {
+      resueltos = 0,
+      en_proceso = 0,  // Aquí está llegando como 'en_proceso' de la consulta
+      pendientes = 0,
+      temporales = 0,
+      total = 0
+    } = estadosData || {};
 
-    // Calcular los porcentajes basados en el total real
-    const totalReal = total; // Total de medicamentos distintos
-    const porcentajeResueltos = Math.round((resueltos / totalReal) * 100);
-    const porcentajeEnProceso = Math.round((enProceso / totalReal) * 100);
-    const porcentajePendientes = Math.round((pendientes / totalReal) * 100);
-    const porcentajeTemporales = Math.round((temporales / totalReal) * 100);
-
-    // Calcular variación día anterior
+    // Calcular porcentajes con protección contra división por cero
+    const porcentajeResueltos = total ? Math.round((resueltos / total) * 100) : 0;
+    const porcentajeEnProceso = total ? Math.round((en_proceso / total) * 100) : 0; // Usar en_proceso
+    const porcentajePendientes = total ? Math.round((pendientes / total) * 100) : 0;
+    const porcentajeTemporales = total ? Math.round((temporales / total) * 100) : 0;
     const hoyVsAyer = ayer ? Math.round(((hoy - ayer) / ayer) * 100) : 0;
 
     res.render("dashboard", {
@@ -1311,14 +1259,14 @@ const dashboard_view = async (req, res) => {
         hoyVsAyer,
         resueltos,
         porcentajeResueltos,
-        enProceso,
+        enProceso: en_proceso, // Mapear en_proceso a enProceso para mantener consistencia
         porcentajeEnProceso,
         pendientes,
         porcentajePendientes,
         temporales,
         porcentajeTemporales,
-        total: totalReal, // Total ahora incluye todos los estados
-      },
+        total
+      }
     });
   } catch (error) {
     console.error("Error:", error);
@@ -1354,71 +1302,75 @@ const get_trend_data = async (req, res) => {
 };
 
 // Endpoint para obtener distribución de estados
-// Modificar get_state_distribution
+
 const get_state_distribution = async (req, res) => {
   try {
-    const results = await new Promise((resolve, reject) => {
-      connection.query(
-        `WITH DescuadreTendencias AS (
+      const results = await new Promise((resolve, reject) => {
+          connection.query(`
+              WITH DescuadreTendencias AS (
                   SELECT 
                       d.codigo_med,
-                      COUNT(*) as total_apariciones
+                      COUNT(*) as total_apariciones,
+                      MAX(mg.id_estado) as ultimo_estado
                   FROM descuadres d
-                  GROUP BY d.codigo_med
-              ),
-              UltimosEstados AS (
-                  SELECT 
-                      d.codigo_med,
-                      CASE 
-                          WHEN dt.total_apariciones = 1 THEN 'Temporal'
-                          WHEN mg.id_estado IS NULL THEN 'Pendiente'
-                          ELSE ed.nombre 
-                      END as estado
-                  FROM descuadres d
-                  JOIN DescuadreTendencias dt ON d.codigo_med = dt.codigo_med
                   LEFT JOIN (
-                      SELECT d2.codigo_med, mg.id_estado, mg.fecha_gestion
+                      SELECT d2.codigo_med, mg.id_estado
                       FROM medicamentos_gestionados mg
                       JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
                       WHERE mg.id_gestion = (
                           SELECT MAX(mg2.id_gestion)
                           FROM medicamentos_gestionados mg2
-                          JOIN descuadres d3 ON mg2.id_descuadre = d3.id_descuadre
-                          WHERE d3.codigo_med = d2.codigo_med
+                          WHERE mg2.id_descuadre = d2.id_descuadre
                       )
                   ) mg ON d.codigo_med = mg.codigo_med
-                  LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
-                  WHERE (d.codigo_med, d.id_descuadre) IN (
-                      SELECT codigo_med, MAX(id_descuadre)
-                      FROM descuadres
-                      GROUP BY codigo_med
-                  )
+                  GROUP BY d.codigo_med
               )
               SELECT 
-                  estado as nombre,
-                  COUNT(*) as total,
-                  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(DISTINCT codigo_med) FROM descuadres), 1) as porcentaje
-              FROM UltimosEstados
-              GROUP BY estado
-              ORDER BY 
                   CASE 
-                      WHEN estado = 'Pendiente' THEN 1
-                      WHEN estado = 'En proceso' THEN 2
-                      WHEN estado = 'Regularizar' THEN 3
-                      WHEN estado = 'Corregido' THEN 4
-                      WHEN estado = 'Temporal' THEN 5
-                      ELSE 6
+                      WHEN dt.total_apariciones = 1 AND dt.ultimo_estado IS NULL THEN 'Temporal'
+                      WHEN dt.ultimo_estado = 3 THEN 'Resuelto'
+                      WHEN dt.ultimo_estado = 2 THEN 'En proceso'
+                      ELSE 'Pendiente' -- Cambio aquí: todo lo demás es Pendiente
+                  END as nombre,
+                  COUNT(*) as total,
+                  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(DISTINCT codigo_med) FROM descuadres), 1) as porcentaje,
+                  CASE 
+                      WHEN dt.total_apariciones = 1 AND dt.ultimo_estado IS NULL THEN '#6f42c1'  -- Morado
+                      WHEN dt.ultimo_estado = 3 THEN '#198754'  -- Verde
+                      WHEN dt.ultimo_estado = 2 THEN '#ffc107'  -- Amarillo
+                      ELSE '#dc3545' -- Rojo para pendientes
+                  END as color
+              FROM DescuadreTendencias dt
+              GROUP BY 
+                  CASE 
+                      WHEN dt.total_apariciones = 1 AND dt.ultimo_estado IS NULL THEN 'Temporal'
+                      WHEN dt.ultimo_estado = 3 THEN 'Resuelto'
+                      WHEN dt.ultimo_estado = 2 THEN 'En proceso'
+                      ELSE 'Pendiente'
+                  END,
+                  CASE 
+                      WHEN dt.total_apariciones = 1 AND dt.ultimo_estado IS NULL THEN '#6f42c1'
+                      WHEN dt.ultimo_estado = 3 THEN '#198754'
+                      WHEN dt.ultimo_estado = 2 THEN '#ffc107'
+                      ELSE '#dc3545'
+                  END
+              ORDER BY 
+                  CASE nombre
+                      WHEN 'Pendiente' THEN 1
+                      WHEN 'En proceso' THEN 2
+                      WHEN 'Resuelto' THEN 3
+                      WHEN 'Temporal' THEN 4
                   END`,
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
-        }
-      );
-    });
-    res.json(results);
+              (error, results) => {
+                  if (error) reject(error);
+                  resolve(results);
+              }
+          );
+      });
+      res.json(results);
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: error.message });
+      console.error("Error:", error);
+      res.status(500).json({ error: error.message });
   }
 };
 
@@ -1461,6 +1413,28 @@ const get_analysis_all = async (req, res) => {
   }
 };
 
+const get_categorias = async (req, res) => {
+  try {
+    const query = `
+          SELECT 
+              id_categoria,
+              nombre
+          FROM categorias_descuadre 
+          ORDER BY nombre`;
+
+    connection.query(query, (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json({ categorias: results || [] });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   upload_view,
   upload_excel,
@@ -1485,4 +1459,5 @@ module.exports = {
   get_trend_data,
   get_state_distribution,
   get_analysis_all,
+  get_categorias,
 };
