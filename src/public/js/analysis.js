@@ -200,22 +200,26 @@ document.addEventListener("DOMContentLoaded", function () {
             applyFilter(() => true);
           });
 
+          // Filtro para cambios significativos
+          // Filtro para cambios significativos
           $(".filter-changes").on("click", function () {
             applyFilter((settings, searchData, index) => {
               const row = dataTable.row(index).data();
-              return row && row.tipo_patron === "cambios";
+              // Mostrar descuadres con cambios significativos sin importar su estado
+              return (
+                row &&
+                (row.tipo_patron === "cambios" || // Tiene cambios significativos
+                  row.tiene_cambios_tendencia) // O presenta cambios en su tendencia
+              );
             });
           });
-
           $(".filter-regular").on("click", function () {
             applyFilter((settings, searchData, index) => {
               const row = dataTable.row(index).data();
               return (
                 row &&
-                row.tipo_patron === "regular" &&
-                row.valores_unicos === 1 &&
-                row.total_apariciones >= 2 &&
-                row.estado_gestion === "Pendiente"
+                (row.tipo_patron === "regular" || // Tiene patrón regular
+                  row.estado_gestion === "Regularizar") // O está en estado Regularizar
               );
             });
           });
@@ -515,168 +519,132 @@ async function gestionarMedicamento(codigo, descripcion, data) {
   try {
     if (!data) {
       const response = await fetch(`/api/analysis/manage/${codigo}`);
-      if (!response.ok) {
-        throw new Error("Error al obtener datos del medicamento");
-      }
+      if (!response.ok) throw new Error("Error al obtener datos del medicamento");
       data = await response.json();
     }
 
     const result = await Swal.fire({
       title: "Gestionar Medicamento",
       html: `
-          <div class="text-start">
-              <h6 class="mb-3">
-                  <i class="bi bi-capsule me-2"></i>${descripcion}
-                  <br>
-                  <small class="text-muted">
-                      <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
-                  </small>
-              </h6>
-              <div class="mb-3">
-                  <label class="form-label">Estado</label>
-                  <select class="form-select" id="estado">
-                      ${data.estados.map(estado => `
-                          <option value="${estado.id_estado}"
-                              ${data.medicamento?.id_estado === estado.id_estado ? 'selected' : ''}>
-                              ${estado.nombre}
-                          </option>
-                      `).join('')}
-                  </select>
-              </div>
-              <div class="mb-3">
-                  <label class="form-label">Categoría</label>
-                  <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
-                      <option value="">Seleccionar categoría...</option>
-                      ${data.categorias.map(cat => `
-                          <option value="${cat.id_categoria}"
-                              ${data.medicamento?.id_categoria === cat.id_categoria ? 'selected' : ''}>
-                              ${cat.nombre}
-                          </option>
-                      `).join('')}
-                  </select>
-              </div>
-              <div class="mb-3">
-                  <label class="form-label">Motivo</label>
-                  <select class="form-select" id="motivo" disabled>
-                      <option value="">Seleccionar motivo...</option>
-                  </select>
-                  <div id="motivosData" data-motivos='${JSON.stringify(data.motivos)}' style="display:none"></div>
-              </div>
-              <div class="mb-3">
-                  <label class="form-label">Observaciones</label>
-                  <textarea class="form-control" id="observaciones" rows="3">${data.medicamento?.observaciones || ''}</textarea>
-              </div>
+        <div class="text-start">
+          <h6 class="mb-3">
+            <i class="bi bi-capsule me-2"></i>${descripcion}
+            <br>
+            <small class="text-muted">
+              <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
+            </small>
+          </h6>
+          <div class="mb-3">
+            <label class="form-label">Estado</label>
+            <select class="form-select" id="estado">
+              <option value="">Seleccionar estado...</option>
+              ${data.estados
+                .map(
+                  (estado) => `
+                <option value="${estado.id_estado}">${estado.nombre}</option>
+              `
+                )
+                .join("")}
+            </select>
           </div>
-      `,
-      didOpen: () => {
-          const categoriaSelect = document.getElementById('categoria');
-          if (categoriaSelect.value) {
-              actualizarMotivos(categoriaSelect.value, data.medicamento?.id_motivo);
-          }
-      },
-      preConfirm: () => {
-          const categoria = document.getElementById('categoria').value;
-          const motivo = document.getElementById('motivo').value;
-
-          if (!categoria) {
-              Swal.showValidationMessage('Debes seleccionar una categoría');
-              return false;
-          }
-          if (!motivo) {
-              Swal.showValidationMessage('Debes seleccionar un motivo');
-              return false;
-          }
-          return {
-              id_estado: document.getElementById('estado').value,
-              id_categoria: categoria,
-              id_motivo: motivo,
-              observaciones: document.getElementById('observaciones').value
-          };
-      },
+          <div class="mb-3">
+            <label class="form-label">Categoría</label>
+            <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
+              <option value="">Seleccionar categoría...</option>
+              ${data.categorias
+                .map(
+                  (categoria) => `
+                <option value="${categoria.id_categoria}">${categoria.nombre}</option>
+              `
+                )
+                .join("")}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Motivo</label>
+            <select class="form-select" id="motivo" disabled>
+              <option value="">Seleccionar motivo...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" rows="3"></textarea>
+          </div>
+          <div id="motivosData" data-motivos='${JSON.stringify(
+            data.motivos
+          )}'></div>
+        </div>`,
       confirmButtonText: "Guardar",
       showCancelButton: true,
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#00549F",
-  });
+      preConfirm: () => {
+        const estado = document.getElementById("estado").value;
+        const categoria = document.getElementById("categoria").value;
+        const motivo = document.getElementById("motivo").value;
+        const observaciones = document.getElementById("observaciones").value;
 
-  if (result.isConfirmed) {
-    showNotification("info", "Guardando cambios...", "top-center");
-
-    const saveResponse = await fetch(`/api/analysis/update/${codigo}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(result.value),
-    });
-
-    const responseData = await saveResponse.json();
-
-    if (!saveResponse.ok) {
-      if (responseData.isAlreadyManaged) {
-        await Swal.fire({
-          icon: "warning",
-          title: "Medicamento en gestión",
-          text: `Este medicamento está siendo gestionado por ${responseData.managedBy}`,
-          confirmButtonColor: "#00549F",
-        });
-        return;
-      }
-      throw new Error(responseData.error || "Error al guardar la gestión");
-    }
-
-    showNotification("success", "Medicamento gestionado correctamente");
-
-    // Obtener el filtro activo actual
-    const activeFilter = $('.filter-buttons .btn.active').attr('class').match(/filter-\w+/)[0];
-    
-    // Recargar datos manteniendo el estado actual
-    try {
-        const currentMonth = document.getElementById("analysisMonth").value;
-        const response = await fetch(`/api/analysis/${currentMonth}`);
-        if (!response.ok) throw new Error("Error al obtener datos actualizados");
-        const newData = await response.json();
-
-        // Usar la variable global dataTable
-        if (dataTable) {
-            dataTable.clear();
-            dataTable.rows.add(newData.analysis);
-            dataTable.draw();
-
-            // Reactivar el filtro
-            if (activeFilter) {
-                $(`.${activeFilter}`).trigger('click');
-            }
-
-            // Actualizar estadísticas
-            const stats = {
-                total: newData.analysis.length,
-                cambios: newData.analysis.filter(row => row.tipo_patron === 'cambios').length,
-                regulares: newData.analysis.filter(row => row.tipo_patron === 'regular').length,
-                temporales: newData.analysis.filter(row => row.tipo_patron === 'temporal').length,
-                pendientes: newData.analysis.filter(row => row.estado_gestion === 'Pendiente').length
-            };
-
-            // Actualizar el panel de estadísticas
-            updateStatsPanel(stats);
+        if (!estado || !categoria || !motivo) {
+          Swal.showValidationMessage("Por favor complete todos los campos");
+          return false;
         }
 
-        // Reinicializar tooltips
-        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltips.forEach(tooltip => {
-            const bsTooltip = bootstrap.Tooltip.getInstance(tooltip);
-            if (bsTooltip) {
-                bsTooltip.dispose();
-            }
-            new bootstrap.Tooltip(tooltip);
-        });
-    } catch (error) {
-        console.error("Error al recargar datos:", error);
-        showNotification("error", "Error al actualizar la tabla");
+        return {
+          id_estado: estado,
+          id_categoria: categoria,
+          id_motivo: motivo,
+          observaciones: observaciones
+        };
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      const saveResponse = await fetch(`/api/analysis/update/${codigo}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result.value)
+      });
+
+      const responseData = await saveResponse.json();
+
+      if (!saveResponse.ok) {
+        if (responseData.isAlreadyManaged) {
+          showNotification(
+            "warning",
+            `${descripcion.split(" ")[0]} está siendo gestionado por ${responseData.managedBy}`,
+            "top-end"
+          );
+          return;
+        }
+        throw new Error(responseData.error || "Error al guardar la gestión");
+      }
+
+      // Recargar tabla de manera asíncrona
+      const currentMonth = document.getElementById("analysisMonth").value;
+      const tableResponse = await fetch(`/api/analysis/${currentMonth}`);
+      const tableData = await tableResponse.json();
+      
+      if (dataTable) {
+        dataTable.clear();
+        dataTable.rows.add(tableData.analysis);
+        dataTable.draw();
+      }
+
+      // Solo mostrar una notificación de éxito
+      showNotification(
+        "success",
+        `${descripcion.split(" ")[0]} actualizado correctamente`,
+        "top-end"
+      );
     }
-}
-} catch (error) {
-  console.error("Error:", error);
-  showNotification("error", "Error al gestionar el medicamento: " + error.message);
-}
+  } catch (error) {
+    console.error("Error:", error);
+    showNotification(
+      "error",
+      `Error al gestionar ${descripcion.split(" ")[0]}: ${error.message}`,
+      "top-end"
+    );
+  }
 }
 
 // Asegurar que el event listener está correctamente configurado
@@ -867,6 +835,6 @@ function updateStatsPanel(stats) {
   `;
 
   // Actualizar el panel de estadísticas
-  const oldStats = $('.card.border-0.bg-light').closest('.row');
+  const oldStats = $(".card.border-0.bg-light").closest(".row");
   oldStats.replaceWith(statsHtml);
 }

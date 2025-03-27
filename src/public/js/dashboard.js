@@ -80,29 +80,28 @@ async function initializeStateChart() {
     const response = await fetch("/api/dashboard/states");
     const data = await response.json();
 
-    // Configuración simplificada con los estados exactos de la API
+    // Configuración simplificada con los estados exactos
     const estadosConfig = [
       { nombre: "Pendiente", color: "#dc3545" }, // Rojo
       { nombre: "En proceso", color: "#ffc107" }, // Amarillo
       { nombre: "Resuelto", color: "#198754" }, // Verde
-      { nombre: "Temporal", color: "#6f42c1" }, // Morado
+      { nombre: "Regularizar", color: "#6f42c1" }, // Morado
     ];
 
-    // Mantener los datos tal como vienen de la API
     const datosOrdenados = data
       .map((item) => {
         const config = estadosConfig.find((c) => c.nombre === item.nombre);
         return {
           ...item,
-          color: config?.color || "#dc3545", // Usar rojo como color por defecto
+          color: config?.color || "#dc3545",
         };
       })
       .sort((a, b) => {
         const orden = {
-          Pendientes: 1,
-          "En Proceso": 2,
+          Pendiente: 1,
+          "En proceso": 2,
           Resuelto: 3,
-          Temporal: 4,
+          Regularizar: 4,
         };
         return (orden[a.nombre] || 99) - (orden[b.nombre] || 99);
       });
