@@ -19,7 +19,7 @@ router.post('/api/upload', controller.upload_excel)
 router.get('/api/reports/categories/:month', api.get_categories_report);
 router.get('/api/managed/:status', controller.get_managed_mismatches);
 router.get('/api/categorias', controller.get_categorias);
-router.get('/api/reports/summary/:month', controller.get_month_report);
+router.get('/api/reports/month/:month', controller.get_month_report);
 router.get('/api/reports/top-medicines/:month', controller.get_top_medicines);
 router.get('/api/reports/evolution/:code', controller.get_medicine_evolution);
 router.get('/api/reports/medicines', controller.get_medicines_list);

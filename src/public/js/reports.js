@@ -41,133 +41,136 @@ function getLastTwelveMonths() {
 }
 
 function populateMonthSelectors(months) {
-    const selectors = [
-        "#summaryMonth",
-        "#topMedsMonth",
-        "#compareMonth1",
-        "#compareMonth2"
-    ];
+  const selectors = [
+    "#summaryMonth",
+    "#topMedsMonth",
+    "#compareMonth1",
+    "#compareMonth2",
+  ];
 
-    selectors.forEach((selector) => {
-        const select = document.querySelector(selector);
-        if (select) {
-            // Agregar opción "Todos los períodos" (excepto para los selectores de comparación)
-            if (!selector.includes('compare')) {
-                const allOption = document.createElement('option');
-                allOption.value = 'all';
-                allOption.textContent = 'Todos los períodos';
-                select.appendChild(allOption);
-            }
+  selectors.forEach((selector) => {
+    const select = document.querySelector(selector);
+    if (select) {
+      // Agregar opción "Todos los períodos" (excepto para los selectores de comparación)
+      if (!selector.includes("compare")) {
+        const allOption = document.createElement("option");
+        allOption.value = "all";
+        allOption.textContent = "Todos los períodos";
+        select.appendChild(allOption);
+      }
 
-            // Agregar los meses
-            months.forEach((month) => {
-                const option = new Option(month.label, month.value);
-                select.add(option);
-            });
-        }
-    });
+      // Agregar los meses
+      months.forEach((month) => {
+        const option = new Option(month.label, month.value);
+        select.add(option);
+      });
+    }
+  });
 }
 
 async function initializeSummaryChart() {
-    const summaryMonth = document.querySelector("#summaryMonth");
-    let chart = null;
+  const summaryMonth = document.querySelector("#summaryMonth");
+  let chart = null;
 
-    summaryMonth.addEventListener("change", async () => {
-        try {
-            const response = await fetch(`/api/reports/month/${summaryMonth.value}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
+  summaryMonth.addEventListener("change", async () => {
+    try {
+      console.log("Fetching data for month:", summaryMonth.value);
+      const response = await fetch(`/api/reports/month/${summaryMonth.value}`);
 
-            // Verificar que data tenga las propiedades necesarias
-            if (!data) {
-                throw new Error('No se recibieron datos del servidor');
-            }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-            const options = {
-                series: [{
-                    name: "Descuadres",
-                    data: [
-                        { x: "Pendientes", y: data.pendientes || 0 },
-                        { x: "En Proceso", y: data.en_proceso || 0 },
-                        { x: "Resueltos", y: data.resueltos || 0 }
-                    ]
-                }],
-                chart: {
-                    type: "bar",
-                    height: 350
-                },
-                plotOptions: {
-                    bar: {
-                        horizontal: true,
-                        distributed: true,
-                        barHeight: "50%",
-                        dataLabels: {
-                            position: 'bottom'
-                        }
-                    }
-                },
-                colors: ['#dc3545', '#ffc107', '#198754'],
-                dataLabels: {
-                    enabled: true,
-                    formatter: function(val) {
-                        return val;
-                    },
-                    textAnchor: 'start',
-                    offsetX: 0
-                },
-                xaxis: {
-                    categories: ["Pendientes", "En Proceso", "Resueltos"],
-                    labels: {
-                        formatter: function(val) {
-                            return Math.round(val);
-                        }
-                    }
-                },
-                yaxis: {
-                    title: {
-                        text: "Estado"
-                    }
-                },
-                title: {
-                    text: `Resumen de Descuadres - ${summaryMonth.value === 'all' ? 
-                        'Todos los períodos' : 
-                        new Date(summaryMonth.value + "-01").toLocaleDateString("es-ES", {
-                            month: "long",
-                            year: "numeric"
-                        })}`,
-                    align: "left"
-                }
-            };
+      const data = await response.json();
+      console.log("Received data:", data);
 
-            if (chart) {
-                chart.destroy();
-            }
+      const options = {
+        series: [
+          {
+            name: "Descuadres",
+            data: [
+              { x: "Pendientes", y: data.pendientes || 0 },
+              { x: "En Proceso", y: data.en_proceso || 0 },
+              { x: "Resueltos", y: data.resueltos || 0 },
+            ],
+          },
+        ],
+        chart: {
+          type: "bar",
+          height: 350,
+        },
+        plotOptions: {
+          bar: {
+            horizontal: true,
+            distributed: true,
+            barHeight: "50%",
+            dataLabels: {
+              position: "bottom",
+            },
+          },
+        },
+        colors: ["#dc3545", "#ffc107", "#198754"],
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            return val;
+          },
+          textAnchor: "start",
+          offsetX: 0,
+        },
+        xaxis: {
+          categories: ["Pendientes", "En Proceso", "Resueltos"],
+          labels: {
+            formatter: function (val) {
+              return Math.round(val);
+            },
+          },
+        },
+        yaxis: {
+          title: {
+            text: "Estado",
+          },
+        },
+        title: {
+          text: `Resumen de Descuadres - ${
+            summaryMonth.value === "all"
+              ? "Todos los períodos"
+              : new Date(summaryMonth.value + "-01").toLocaleDateString(
+                  "es-ES",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )
+          }`,
+          align: "left",
+        },
+      };
 
-            chart = new ApexCharts(document.querySelector("#summaryChart"), options);
-            await chart.render();
-        } catch (error) {
-            console.error("Error:", error);
-            const container = document.querySelector("#summaryChart");
-            container.innerHTML = `
+      if (chart) {
+        chart.destroy();
+      }
+
+      chart = new ApexCharts(document.querySelector("#summaryChart"), options);
+      chart.render();
+    } catch (error) {
+      console.error("Error:", error);
+      const container = document.querySelector("#summaryChart");
+      container.innerHTML = `
                 <div class="alert alert-danger" role="alert">
                     Error al cargar el resumen mensual: ${error.message}
                 </div>
             `;
-        }
-    });
-
-    // Disparar el evento change inicial
-    summaryMonth.dispatchEvent(new Event("change"));
+    }
+  });
+  summaryMonth.dispatchEvent(new Event("change"));
 }
-
 async function loadTopMedicines() {
-    const topMedsMonth = document.querySelector("#topMedsMonth");
-    const topMedsTable = document.querySelector("#topMedsTable tbody");
-
-    async function updateTable() {
-        try {
-            // Mostrar spinner
-            topMedsTable.innerHTML = `
+  const topMedsMonth = document.querySelector("#topMedsMonth");
+  const topMedsTable = document.querySelector("#topMedsTable tbody");
+  async function updateTable() {
+    try {
+      topMedsTable.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center">
                         <div class="spinner-border text-primary" role="status">
@@ -176,46 +179,49 @@ async function loadTopMedicines() {
                     </td>
                 </tr>
             `;
-
-            const response = await fetch(`/api/reports/top-medicines/${topMedsMonth.value}`);
-            if (!response.ok) throw new Error(`Error HTTP status: ${response.status}`);
-            
-            const data = await response.json();
-            topMedsTable.innerHTML = "";
-
-            if (data.medicines && data.medicines.length > 0) {
-                data.medicines.forEach((med) => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
+      const response = await fetch(
+        `/api/reports/top-medicines/${topMedsMonth.value}`
+      );
+      if (!response.ok)
+        throw new Error(`Error HTTP status: ${response.status}`);
+      const data = await response.json();
+      topMedsTable.innerHTML = "";
+      if (data.medicines && data.medicines.length > 0) {
+        data.medicines.forEach((med) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
                         <td>${med.codigo_med}</td>
                         <td>${med.descripcion}</td>
                         <td class="text-end">${med.dias_con_descuadre}</td>
-                        <td class="text-end">${Math.round((med.dias_con_descuadre/med.total_dias_mes)*100)}%</td>
+                        <td class="text-end">${Math.round(
+                          (med.dias_con_descuadre / med.total_dias_mes) * 100
+                        )}%</td>
                         <td class="text-end">${med.min_descuadre}</td>
                         <td class="text-end">${med.max_descuadre}</td>
-                        <td class="text-end">${med.promedio_descuadre.toFixed(2)}</td>
+                        <td class="text-end">${med.promedio_descuadre.toFixed(
+                          2
+                        )}</td>
                     `;
-                    topMedsTable.appendChild(row);
-                });
-            } else {
-                topMedsTable.innerHTML = `
+          topMedsTable.appendChild(row);
+        });
+      } else {
+        topMedsTable.innerHTML = `
                     <tr>
                         <td colspan="7" class="text-center">No hay datos para mostrar en este período</td>
                     </tr>
                 `;
-            }
-        } catch (error) {
-            console.error("Error loading top medicines:", error);
-            topMedsTable.innerHTML = `
+      }
+    } catch (error) {
+      console.error("Error loading top medicines:", error);
+      topMedsTable.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center text-danger">Error al cargar los datos</td>
                 </tr>
             `;
-        }
     }
-
-    topMedsMonth.addEventListener("change", updateTable);
-    await updateTable();
+  }
+  topMedsMonth.addEventListener("change", updateTable);
+  await updateTable();
 }
 
 async function initializeEvolutionChart() {

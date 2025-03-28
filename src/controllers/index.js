@@ -65,61 +65,62 @@ const mismatches_view = async (req, res) => {
 // api resumen mensual
 const get_month_report = async (req, res) => {
   try {
-    const month = req.params.month;
-
-    // Si el mes es 'all', obtener datos de todos los períodos
-    const query =
-      month === "all"
-        ? `WITH DescuadresPorMes AS (
-              SELECT 
-                  DATE_FORMAT(r.fecha_reporte, '%Y-%m') as mes,
-                  COUNT(DISTINCT d.codigo_med) as total_descuadres,
-                  COUNT(DISTINCT CASE WHEN mg.id_estado = 3 THEN d.codigo_med END) as resueltos,
-                  COUNT(DISTINCT CASE WHEN mg.id_estado = 2 THEN d.codigo_med END) as en_proceso,
-                  COUNT(DISTINCT CASE WHEN mg.id_estado = 1 OR mg.id_estado IS NULL THEN d.codigo_med END) as pendientes
-              FROM descuadres d
-              JOIN reportes r ON d.id_reporte = r.id_reporte
-              LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
-              GROUP BY DATE_FORMAT(r.fecha_reporte, '%Y-%m')
-          )
-          SELECT 
-              SUM(total_descuadres) as total,
-              SUM(resueltos) as resueltos,
-              SUM(en_proceso) as en_proceso,
-              SUM(pendientes) as pendientes
-          FROM DescuadresPorMes`
-        : `SELECT 
-              COUNT(DISTINCT d.codigo_med) as total,
-              COUNT(DISTINCT CASE WHEN mg.id_estado = 3 THEN d.codigo_med END) as resueltos,
-              COUNT(DISTINCT CASE WHEN mg.id_estado = 2 THEN d.codigo_med END) as en_proceso,
-              COUNT(DISTINCT CASE WHEN mg.id_estado = 1 OR mg.id_estado IS NULL THEN d.codigo_med END) as pendientes
-          FROM descuadres d
-          JOIN reportes r ON d.id_reporte = r.id_reporte
-          LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
-          WHERE DATE_FORMAT(r.fecha_reporte, '%Y-%m') = ?`;
+    const { month } = req.params;
+    const query = `
+      WITH UltimaGestion AS (
+        SELECT 
+          d.codigo_med,
+          mg.id_estado,
+          ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+        WHERE ${
+          month === "all" ? "1=1" : 'DATE_FORMAT(r.fecha_reporte, "%Y-%m") = ?'
+        }
+      )
+      SELECT
+        COUNT(DISTINCT codigo_med) as total,
+        SUM(CASE WHEN id_estado = 3 THEN 1 ELSE 0 END) as resueltos,
+        SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) as en_proceso,
+        SUM(CASE WHEN id_estado = 4 THEN 1 ELSE 0 END) as regularizar,
+        SUM(CASE WHEN id_estado IS NULL OR id_estado = 1 THEN 1 ELSE 0 END) as pendientes
+      FROM UltimaGestion
+      WHERE rn = 1`;
 
     const params = month === "all" ? [] : [month];
+
+    // console.log("query:", query);
+    // console.log("params:", params);
 
     const results = await new Promise((resolve, reject) => {
       connection.query(query, params, (error, results) => {
         if (error) reject(error);
-        resolve(results[0]);
+        const data = results[0] || {
+          total: 0,
+          resueltos: 0,
+          en_proceso: 0,
+          regularizar: 0,
+          pendientes: 0,
+        };
+        // console.log("Query results:", data);
+        resolve(data);
       });
     });
 
     res.json(results);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error en get_month_report:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// api top medicinas 
+// api top medicinas
 const get_top_medicines = async (req, res) => {
   try {
     const month = req.params.month;
 
-    // Query base para todos los períodos o un mes específico
+    // Query todos los períodos o un mes específico
     const query =
       month === "all"
         ? `WITH MedicineStats AS (
@@ -274,7 +275,7 @@ const get_compare_months = async (req, res) => {
       );
     });
 
-    // query top medicamentos 
+    // query top medicamentos
     const topMedicines = await new Promise((resolve, reject) => {
       connection.query(
         `
@@ -343,7 +344,7 @@ const get_compare_months = async (req, res) => {
   }
 };
 
-// api subida de archivos excel 
+// api subida de archivos excel
 const upload_excel = async (req, res) => {
   try {
     console.log("1. Iniciando proceso de subida de archivo");
@@ -630,15 +631,17 @@ const analysis_view = async (req, res) => {
   }
 };
 
-
 const get_analysis = async (req, res) => {
   try {
     const { month } = req.params;
     let filterClause = "";
+    let params = [];
 
+    // Corregir el manejo del filtro por mes
     if (month && month !== "all") {
       const [year, m] = month.split("-");
-      filterClause = `AND YEAR(r.fecha_reporte) = ${year} AND MONTH(r.fecha_reporte) = ${m}`;
+      filterClause = `AND YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?`;
+      params = [year, m];
     }
 
     const query = `
@@ -651,11 +654,7 @@ const get_analysis = async (req, res) => {
         ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY r.fecha_reporte DESC) as rn
       FROM descuadres d
       JOIN reportes r ON d.id_reporte = r.id_reporte
-      ${
-        month !== "all"
-          ? `WHERE YEAR(r.fecha_reporte) = ${year} AND MONTH(r.fecha_reporte) = ${m}`
-          : ""
-      }
+      WHERE 1=1 ${filterClause}
     ),
     PatronDescuadres AS (
       SELECT 
@@ -708,7 +707,7 @@ const get_analysis = async (req, res) => {
     WHERE ld.rn = 1
     ORDER BY ld.descripcion`;
 
-    connection.query(query, (error, results) => {
+    connection.query(query, params, (error, results) => {
       if (error) {
         console.error("Database error:", error);
         return res.status(500).json({ error: error.message });
@@ -1012,7 +1011,7 @@ const get_medicine_management = async (req, res) => {
 
 const update_medicine_management = async (req, res) => {
   try {
-    console.log('Iniciando actualización de medicamento:', req.params.code);
+    console.log("Iniciando actualización de medicamento:", req.params.code);
     const { code } = req.params;
     const { id_estado, id_categoria, id_motivo, observaciones } = req.body;
 
@@ -1026,21 +1025,21 @@ const update_medicine_management = async (req, res) => {
         ORDER BY r.fecha_reporte DESC, d.id_descuadre DESC
         LIMIT 1`;
 
-      console.log('Query para obtener descuadre:', query);
-      console.log('Código medicamento:', code);
+      console.log("Query para obtener descuadre:", query);
+      console.log("Código medicamento:", code);
 
       connection.query(query, [code], (error, results) => {
         if (error) {
-          console.error('Error al obtener descuadre:', error);
+          console.error("Error al obtener descuadre:", error);
           reject(error);
         }
-        console.log('Resultado descuadre:', results);
+        console.log("Resultado descuadre:", results);
         resolve(results);
       });
     });
 
     if (!descuadre) {
-      console.log('No se encontró el descuadre para:', code);
+      console.log("No se encontró el descuadre para:", code);
       return res.status(404).json({ error: "Medicamento no encontrado" });
     }
 
@@ -1057,25 +1056,24 @@ const update_medicine_management = async (req, res) => {
         id_estado,
         id_categoria,
         id_motivo,
-        observaciones
+        observaciones,
       ];
 
-      console.log('Query de inserción:', insertQuery);
-      console.log('Valores a insertar:', values);
+      console.log("Query de inserción:", insertQuery);
+      console.log("Valores a insertar:", values);
 
       connection.query(insertQuery, values, (error) => {
         if (error) {
-          console.error('Error al insertar gestión:', error);
+          console.error("Error al insertar gestión:", error);
           reject(error);
         }
-        console.log('Gestión insertada correctamente');
+        console.log("Gestión insertada correctamente");
         resolve();
       });
     });
 
-    console.log('Gestión actualizada correctamente para:', code);
+    console.log("Gestión actualizada correctamente para:", code);
     res.json({ success: true });
-
   } catch (error) {
     console.error("Error en update_medicine_management:", error);
     res.status(500).json({ error: error.message });
@@ -1182,7 +1180,7 @@ const get_managed_details = async (req, res) => {
 
 const update_managed_mismatch = async (req, res) => {
   try {
-    console.log('Iniciando actualización:', req.params, req.body);
+    console.log("Iniciando actualización:", req.params, req.body);
     const { code } = req.params;
     const { id_estado, id_categoria, id_motivo, observaciones } = req.body;
 
@@ -1198,7 +1196,7 @@ const update_managed_mismatch = async (req, res) => {
 
       connection.query(query, [code], (error, results) => {
         if (error) {
-          console.error('Error al obtener descuadre:', error);
+          console.error("Error al obtener descuadre:", error);
           reject(error);
         }
         resolve(results);
@@ -1222,23 +1220,22 @@ const update_managed_mismatch = async (req, res) => {
         id_estado,
         id_categoria,
         id_motivo,
-        observaciones
+        observaciones,
       ];
 
-      console.log('Insertando gestión:', values);
+      console.log("Insertando gestión:", values);
 
       connection.query(insertQuery, values, (error) => {
         if (error) {
-          console.error('Error al insertar gestión:', error);
+          console.error("Error al insertar gestión:", error);
           reject(error);
         }
         resolve();
       });
     });
 
-    console.log('Gestión actualizada correctamente');
+    console.log("Gestión actualizada correctamente");
     res.json({ success: true });
-
   } catch (error) {
     console.error("Error en update_managed_mismatch:", error);
     res.status(500).json({ error: error.message });
