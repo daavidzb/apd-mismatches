@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const controller = require('../../controllers/index.js')
 const { isAuthenticated } = require('../../auth/middleware');
-const api = require('../../controllers/api/apis.js')
+const api = require('../../controllers/api/analysis.js')
 
 router.get('/', isAuthenticated, (req, res) => {
     res.redirect('/dashboard');
@@ -28,10 +28,10 @@ router.get('/api/analysis/:month?', controller.get_analysis);
 router.get('/api/analysis/all/:month?', controller.get_analysis_all); 
 router.get('/api/analysis/detail/:month/:code', controller.get_analysis_detail);
 router.get('/api/analysis/manage/:code', controller.get_medicine_management);
-router.post('/api/analysis/manage/:code', controller.update_medicine_management);
-router.post('/api/analysis/update/:code', controller.update_medicine_status);
+router.put('/api/analysis/manage/:code', controller.update_medicine_management);
+router.put('/api/analysis/update/:code', controller.update_medicine_status);
 router.get('/api/managed/details/:codigo', controller.get_managed_details);
-router.put('/api/managed/update/:code', isAuthenticated, controller.update_managed_mismatch);
+router.put('/api/managed/update/:code', controller.update_managed_mismatch);
 router.get('/api/dashboard/trend', controller.get_trend_data);
 router.get('/api/dashboard/states', controller.get_state_distribution);
 

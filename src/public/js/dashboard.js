@@ -51,7 +51,7 @@ async function initializeTrendChart() {
         },
       },
       title: {
-        text: "Tendencia de Descuadres (Últimos 30 días)",
+        text: "(Últimos 30 días)",
         align: "left",
       },
       fill: {
@@ -85,7 +85,7 @@ async function initializeStateChart() {
       { nombre: "Pendiente", color: "#dc3545" }, // Rojo
       { nombre: "En proceso", color: "#ffc107" }, // Amarillo
       { nombre: "Resuelto", color: "#198754" }, // Verde
-      { nombre: "Regularizar", color: "#6f42c1" }, // Morado
+      { nombre: "Regularizar", color: "#00b8d4" }, // turquesa
     ];
 
     const datosOrdenados = data
@@ -117,7 +117,7 @@ async function initializeStateChart() {
       labels: datosOrdenados.map((item) => item.nombre),
       colors: datosOrdenados.map((item) => item.color),
       title: {
-        text: "Distribución por Estado",
+        text: "Hospital Universitario Niño Jesús",
         align: "left",
         style: {
           fontSize: "16px",

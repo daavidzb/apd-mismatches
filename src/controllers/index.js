@@ -62,6 +62,7 @@ const mismatches_view = async (req, res) => {
   }
 };
 
+// api resumen mensual
 const get_month_report = async (req, res) => {
   try {
     const month = req.params.month;
@@ -113,6 +114,7 @@ const get_month_report = async (req, res) => {
   }
 };
 
+// api top medicinas 
 const get_top_medicines = async (req, res) => {
   try {
     const month = req.params.month;
@@ -176,6 +178,7 @@ const get_top_medicines = async (req, res) => {
   }
 };
 
+// api histórico medicamentos
 const get_medicine_evolution = async (req, res) => {
   try {
     const { code } = req.params;
@@ -213,6 +216,7 @@ const get_medicine_evolution = async (req, res) => {
   }
 };
 
+// Api lista de medicamentos
 const get_medicines_list = async (req, res) => {
   try {
     const results = await new Promise((resolve, reject) => {
@@ -241,13 +245,14 @@ const get_medicines_list = async (req, res) => {
   }
 };
 
+// api comparativa meses para apexcharts
 const get_compare_months = async (req, res) => {
   try {
     const { month1, month2 } = req.params;
     const [year1, m1] = month1.split("-");
     const [year2, m2] = month2.split("-");
 
-    // Obtener totales mensuales
+    // query totales mensuales
     const totalsByMonth = await new Promise((resolve, reject) => {
       connection.query(
         `
@@ -269,7 +274,7 @@ const get_compare_months = async (req, res) => {
       );
     });
 
-    // Obtener top medicamentos
+    // query top medicamentos 
     const topMedicines = await new Promise((resolve, reject) => {
       connection.query(
         `
@@ -338,6 +343,7 @@ const get_compare_months = async (req, res) => {
   }
 };
 
+// api subida de archivos excel 
 const upload_excel = async (req, res) => {
   try {
     console.log("1. Iniciando proceso de subida de archivo");
@@ -623,6 +629,7 @@ const analysis_view = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 const get_analysis = async (req, res) => {
   try {
@@ -1005,32 +1012,72 @@ const get_medicine_management = async (req, res) => {
 
 const update_medicine_management = async (req, res) => {
   try {
+    console.log('Iniciando actualización de medicamento:', req.params.code);
     const { code } = req.params;
     const { id_estado, id_categoria, id_motivo, observaciones } = req.body;
 
-    await new Promise((resolve, reject) => {
-      connection.query(
-        `
-        UPDATE descuadres
-        SET 
-          id_estado = ?,
-          id_categoria = ?,
-          id_motivo = ?,
-          observaciones = ?,
-          fecha_actualizacion = CURRENT_TIMESTAMP
-        WHERE codigo_med = ?
-        `,
-        [id_estado, id_categoria, id_motivo, observaciones, code],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
+    // Obtener el último descuadre del medicamento
+    const [descuadre] = await new Promise((resolve, reject) => {
+      const query = `
+        SELECT d.id_descuadre 
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        WHERE d.codigo_med = ?
+        ORDER BY r.fecha_reporte DESC, d.id_descuadre DESC
+        LIMIT 1`;
+
+      console.log('Query para obtener descuadre:', query);
+      console.log('Código medicamento:', code);
+
+      connection.query(query, [code], (error, results) => {
+        if (error) {
+          console.error('Error al obtener descuadre:', error);
+          reject(error);
         }
-      );
+        console.log('Resultado descuadre:', results);
+        resolve(results);
+      });
     });
 
+    if (!descuadre) {
+      console.log('No se encontró el descuadre para:', code);
+      return res.status(404).json({ error: "Medicamento no encontrado" });
+    }
+
+    // Insertar la nueva gestión
+    await new Promise((resolve, reject) => {
+      const insertQuery = `
+        INSERT INTO medicamentos_gestionados 
+        (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
+        VALUES (?, ?, ?, ?, ?, ?)`;
+
+      const values = [
+        descuadre.id_descuadre,
+        req.user.id_usuario,
+        id_estado,
+        id_categoria,
+        id_motivo,
+        observaciones
+      ];
+
+      console.log('Query de inserción:', insertQuery);
+      console.log('Valores a insertar:', values);
+
+      connection.query(insertQuery, values, (error) => {
+        if (error) {
+          console.error('Error al insertar gestión:', error);
+          reject(error);
+        }
+        console.log('Gestión insertada correctamente');
+        resolve();
+      });
+    });
+
+    console.log('Gestión actualizada correctamente para:', code);
     res.json({ success: true });
+
   } catch (error) {
-    console.error("Error in update_medicine_management:", error);
+    console.error("Error en update_medicine_management:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1135,68 +1182,65 @@ const get_managed_details = async (req, res) => {
 
 const update_managed_mismatch = async (req, res) => {
   try {
+    console.log('Iniciando actualización:', req.params, req.body);
     const { code } = req.params;
     const { id_estado, id_categoria, id_motivo, observaciones } = req.body;
 
     // Obtener el último descuadre del medicamento
     const [descuadre] = await new Promise((resolve, reject) => {
-      connection.query(
-        `SELECT d.id_descuadre, mg.id_gestion
-         FROM descuadres d
-         JOIN reportes r ON d.id_reporte = r.id_reporte
-         LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
-         WHERE d.codigo_med = ?
-         ORDER BY r.fecha_reporte DESC, d.id_descuadre DESC
-         LIMIT 1`,
-        [code],
-        (error, results) => {
-          if (error) reject(error);
-          resolve(results);
+      const query = `
+        SELECT d.id_descuadre
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        WHERE d.codigo_med = ?
+        ORDER BY r.fecha_reporte DESC, d.id_descuadre DESC
+        LIMIT 1`;
+
+      connection.query(query, [code], (error, results) => {
+        if (error) {
+          console.error('Error al obtener descuadre:', error);
+          reject(error);
         }
-      );
+        resolve(results);
+      });
     });
 
     if (!descuadre) {
-      return res.status(404).json({ error: "Descuadre no encontrado" });
+      return res.status(404).json({ error: "Medicamento no encontrado" });
     }
 
-    // Actualizar o insertar en medicamentos_gestionados
-    const query = descuadre.id_gestion
-      ? `UPDATE medicamentos_gestionados 
-       SET id_estado = ?, id_categoria = ?, id_motivo = ?, 
-           observaciones = ?, fecha_gestion = CURRENT_TIMESTAMP
-       WHERE id_gestion = ?`
-      : `INSERT INTO medicamentos_gestionados 
-       (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?)`;
-
-    const params = descuadre.id_gestion
-      ? [
-          id_estado,
-          id_categoria,
-          id_motivo,
-          observaciones,
-          descuadre.id_gestion,
-        ]
-      : [
-          descuadre.id_descuadre,
-          req.user.id_usuario,
-          id_estado,
-          id_categoria,
-          id_motivo,
-          observaciones,
-        ];
-
+    // Insertar la nueva gestión
     await new Promise((resolve, reject) => {
-      connection.query(query, params, (error) => {
-        if (error) reject(error);
+      const insertQuery = `
+        INSERT INTO medicamentos_gestionados 
+        (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
+        VALUES (?, ?, ?, ?, ?, ?)`;
+
+      const values = [
+        descuadre.id_descuadre,
+        req.user.id_usuario,
+        id_estado,
+        id_categoria,
+        id_motivo,
+        observaciones
+      ];
+
+      console.log('Insertando gestión:', values);
+
+      connection.query(insertQuery, values, (error) => {
+        if (error) {
+          console.error('Error al insertar gestión:', error);
+          reject(error);
+        }
         resolve();
       });
     });
 
+    console.log('Gestión actualizada correctamente');
     res.json({ success: true });
+
   } catch (error) {
-    console.error("Error in update_managed_mismatch:", error);
+    console.error("Error en update_managed_mismatch:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1303,7 +1347,7 @@ const dashboard_view = async (req, res) => {
   }
 };
 
-// Endpoint para obtener datos del gráfico de tendencia
+// Endpoint para obtener datos del gráfico de tendencias (30 días)
 const get_trend_data = async (req, res) => {
   try {
     const results = await new Promise((resolve, reject) => {
@@ -1375,7 +1419,7 @@ const get_state_distribution = async (req, res) => {
             CASE 
               WHEN id_estado = 3 THEN '#198754'  -- Verde
               WHEN id_estado = 2 THEN '#ffc107'  -- Amarillo
-              WHEN id_estado = 4 THEN '#6f42c1'  -- Morado
+              WHEN id_estado = 4 THEN '#00b8d4'  -- Turquesa (antes era morado #6f42c1)
               ELSE '#dc3545'  -- Rojo
             END as color
           FROM UltimaGestion

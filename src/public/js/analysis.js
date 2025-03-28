@@ -517,10 +517,13 @@ async function showMedicineDetails(codigo, month) {
 // Función para gestionar medicamento
 async function gestionarMedicamento(codigo, descripcion, data) {
   try {
+    console.log('Iniciando gestión para:', codigo, descripcion);
+    
     if (!data) {
       const response = await fetch(`/api/analysis/manage/${codigo}`);
       if (!response.ok) throw new Error("Error al obtener datos del medicamento");
       data = await response.json();
+      console.log('Datos obtenidos:', data);
     }
 
     const result = await Swal.fire({
@@ -538,26 +541,18 @@ async function gestionarMedicamento(codigo, descripcion, data) {
             <label class="form-label">Estado</label>
             <select class="form-select" id="estado">
               <option value="">Seleccionar estado...</option>
-              ${data.estados
-                .map(
-                  (estado) => `
+              ${data.estados.map(estado => `
                 <option value="${estado.id_estado}">${estado.nombre}</option>
-              `
-                )
-                .join("")}
+              `).join('')}
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Categoría</label>
             <select class="form-select" id="categoria" onchange="actualizarMotivos(this.value)">
               <option value="">Seleccionar categoría...</option>
-              ${data.categorias
-                .map(
-                  (categoria) => `
+              ${data.categorias.map(categoria => `
                 <option value="${categoria.id_categoria}">${categoria.nombre}</option>
-              `
-                )
-                .join("")}
+              `).join('')}
             </select>
           </div>
           <div class="mb-3">
@@ -570,22 +565,20 @@ async function gestionarMedicamento(codigo, descripcion, data) {
             <label class="form-label">Observaciones</label>
             <textarea class="form-control" id="observaciones" rows="3"></textarea>
           </div>
-          <div id="motivosData" data-motivos='${JSON.stringify(
-            data.motivos
-          )}'></div>
+          <div id="motivosData" data-motivos='${JSON.stringify(data.motivos)}'></div>
         </div>`,
       confirmButtonText: "Guardar",
       showCancelButton: true,
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#00549F",
       preConfirm: () => {
-        const estado = document.getElementById("estado").value;
-        const categoria = document.getElementById("categoria").value;
-        const motivo = document.getElementById("motivo").value;
-        const observaciones = document.getElementById("observaciones").value;
+        const estado = document.getElementById('estado').value;
+        const categoria = document.getElementById('categoria').value;
+        const motivo = document.getElementById('motivo').value;
+        const observaciones = document.getElementById('observaciones').value;
 
         if (!estado || !categoria || !motivo) {
-          Swal.showValidationMessage("Por favor complete todos los campos");
+          Swal.showValidationMessage('Por favor complete todos los campos');
           return false;
         }
 
@@ -598,14 +591,22 @@ async function gestionarMedicamento(codigo, descripcion, data) {
       }
     });
 
+    console.log('Resultado del modal:', result);
+
     if (result.isConfirmed && result.value) {
-      const saveResponse = await fetch(`/api/analysis/update/${codigo}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      console.log('Datos a enviar:', result.value);
+
+      const saveResponse = await fetch(`/api/analysis/manage/${codigo}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(result.value)
       });
 
+      console.log('Respuesta del servidor:', saveResponse);
       const responseData = await saveResponse.json();
+      console.log('Datos de respuesta:', responseData);
 
       if (!saveResponse.ok) {
         if (responseData.isAlreadyManaged) {
@@ -619,26 +620,22 @@ async function gestionarMedicamento(codigo, descripcion, data) {
         throw new Error(responseData.error || "Error al guardar la gestión");
       }
 
-      // Recargar tabla de manera asíncrona
+      // Recargar tabla manteniendo filtro
       const currentMonth = document.getElementById("analysisMonth").value;
       const tableResponse = await fetch(`/api/analysis/${currentMonth}`);
       const tableData = await tableResponse.json();
       
       if (dataTable) {
+        console.log('Actualizando DataTable...');
         dataTable.clear();
         dataTable.rows.add(tableData.analysis);
         dataTable.draw();
       }
 
-      // Solo mostrar una notificación de éxito
-      showNotification(
-        "success",
-        `${descripcion.split(" ")[0]} actualizado correctamente`,
-        "top-end"
-      );
+      showNotification("success", `El medicamento ${descripcion.split(" ")[0]} ha sido actualizado correctamente`, "top-end");
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error detallado:", error);
     showNotification(
       "error",
       `Error al gestionar ${descripcion.split(" ")[0]}: ${error.message}`,
