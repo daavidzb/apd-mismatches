@@ -37,6 +37,7 @@ router.get('/api/analysis/detail/:month/:code', sync.get_analysis_detail);
 router.get('/api/analysis/manage/:code', sync.get_medicine_management);
 router.put('/api/analysis/manage/:code', sync.update_medicine_management);
 router.put('/api/analysis/update/:code', sync.update_medicine_status);
+router.get('/api/analysis/history/:code/:month?', sync.get_medicine_history);
 
 
 router.get('/api/managed/:status', manage.get_managed_mismatches);

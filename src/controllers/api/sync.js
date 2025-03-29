@@ -488,6 +488,56 @@ const update_medicine_status = async (req, res) => {
   }
 };
 
+const get_medicine_history = async (req, res) => {
+  try {
+    const { code, month } = req.params;
+    let filterClause = "";
+    let params = [code];
+
+    if (month && month !== "all") {
+      const [year, m] = month.split("-");
+      filterClause = "AND YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
+      params.push(year, m);
+    }
+
+    const query = `
+      SELECT 
+        d.codigo_med,
+        d.descripcion,
+        d.descuadre,
+        r.fecha_reporte,
+        mg.id_estado,
+        ed.nombre as estado,
+        COALESCE(mg.observaciones, 'Sin observaciones') as observaciones
+      FROM descuadres d
+      JOIN reportes r ON d.id_reporte = r.id_reporte
+      LEFT JOIN (
+        SELECT mg2.* 
+        FROM medicamentos_gestionados mg2
+        INNER JOIN (
+          SELECT id_descuadre, MAX(fecha_gestion) as max_fecha
+          FROM medicamentos_gestionados
+          GROUP BY id_descuadre
+        ) mg3 ON mg2.id_descuadre = mg3.id_descuadre 
+        AND mg2.fecha_gestion = mg3.max_fecha
+      ) mg ON d.id_descuadre = mg.id_descuadre
+      LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+      WHERE d.codigo_med = ? ${filterClause}
+      ORDER BY r.fecha_reporte ASC`;
+
+    connection.query(query, params, (error, results) => {
+      if (error) {
+        console.error("Error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   get_analysis,
   get_analysis_all,
@@ -495,4 +545,5 @@ module.exports = {
   get_medicine_management,
   update_medicine_management,
   update_medicine_status,
+  get_medicine_history,
 };

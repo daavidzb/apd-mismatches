@@ -212,7 +212,6 @@ document.addEventListener("DOMContentLoaded", function () {
           });
 
           // Filtro para cambios significativos
-          // Filtro para cambios significativos
           $(".filter-changes").on("click", function () {
             applyFilter((settings, searchData, index) => {
               const row = dataTable.row(index).data();
@@ -387,141 +386,103 @@ function getLastTwelveMonths() {
 // Modificar la función showMedicineDetails para medicamentos con cambios significativos
 async function showMedicineDetails(codigo, month) {
   try {
-    const response = await fetch(`/api/analysis/detail/${month}/${codigo}`);
-    if (!response.ok) {
-      showNotification("error", "Error al obtener detalles del medicamento");
-      return;
-    }
+    const [detailResponse, historyResponse] = await Promise.all([
+      fetch(`/api/analysis/detail/${month}/${codigo}`),
+      fetch(`/api/analysis/history/${codigo}/${month}`)
+    ]);
 
-    const data = await response.json();
+    const detailData = await detailResponse.json();
+    const historyData = await historyResponse.json();
 
-    // Preparar los datos para la gráfica
-    const chartData = data.details.map((detail) => ({
-      x: new Date(detail.fecha).getTime(),
-      y: detail.descuadre,
-      cambio: detail.cambio_tendencia,
+    // Crear gráfico de evolución
+    const chartData = historyData.map(item => ({
+      x: new Date(item.fecha_reporte).getTime(),
+      y: item.descuadre
     }));
 
-    Swal.fire({
-      title: `<i class="bi bi-capsule me-2"></i>${data.medicina.descripcion}`,
-      html: `
-                <div class="text-start">
-                    <div class="text-muted mb-2">
-                        <i class="bi bi-upc-scan me-2"></i>Código: ${codigo}
-                    </div>
-                    <div class="table-responsive mb-4">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th class="text-end">Descuadre</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.details
-                                  .map(
-                                    (detail) => `
-                                    <tr class="${
-                                      detail.cambio_tendencia
-                                        ? "table-warning"
-                                        : ""
-                                    }">
-                                        <td>
-                                            ${
-                                              detail.cambio_tendencia
-                                                ? '<i class="bi bi-exclamation-triangle-fill text-warning me-2" title="Cambio significativo"></i>'
-                                                : '<i class="bi bi-dot me-2"></i>'
-                                            }
-                                            ${new Date(
-                                              detail.fecha
-                                            ).toLocaleDateString("es-ES")}
-                                        </td>
-                                        <td class="text-end ${
-                                          detail.descuadre < 0
-                                            ? "text-danger"
-                                            : "text-success"
-                                        }">
-                                            <strong>${detail.descuadre}</strong>
-                                        </td>
-                                    </tr>
-                                `
-                                  )
-                                  .join("")}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="descuadresChart" style="height: 300px;"></div>
-                </div>
-            `,
-      width: "600px",
-      didOpen: () => {
-        // Inicializar gráfica de evolución con diseño mejorado
-        const chart = new ApexCharts(
-          document.querySelector("#descuadresChart"),
-          {
-            series: [
-              {
-                name: "Descuadre",
-                data: chartData,
-              },
-            ],
-            chart: {
-              type: "line",
-              height: 300,
-              animations: {
-                enabled: true,
-                easing: "easeinout",
-              },
-            },
-            markers: {
-              size: 6,
-              colors: chartData.map((point) =>
-                point.cambio ? "#ffc107" : "#00549F"
-              ),
-              strokeWidth: 0,
-            },
-            stroke: {
-              curve: "smooth",
-              width: 3,
-            },
-            xaxis: {
-              type: "datetime",
-              labels: {
-                datetimeFormatter: {
-                  year: "yyyy",
-                  month: "MMM yyyy",
-                  day: "dd MMM",
-                },
-              },
-            },
-            yaxis: {
-              title: {
-                text: "Unidades",
-              },
-            },
-            tooltip: {
-              x: {
-                format: "dd MMM yyyy",
-              },
-              y: {
-                title: {
-                  formatter: () => "Descuadre:",
-                },
-              },
-            },
-            grid: {
-              borderColor: "#f1f1f1",
-            },
-          }
-        );
+    // Crear tabla de historial
+    const historyTable = `
+      <div class="table-responsive mt-4">
+        <table class="table table-sm table-hover">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th class="text-end">Diferencia</th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${historyData.map(item => `
+              <tr>
+                <td>${new Date(item.fecha_reporte).toLocaleDateString()}</td>
+                <td class="text-end ${item.descuadre > 0 ? 'text-success' : 'text-danger'}">
+                  ${item.descuadre}
+                </td>
+                <td>
+                  <span class="badge ${getBadgeClass(item.estado)}">
+                    ${item.estado || 'Pendiente'}
+                  </span>
+                </td>
+                <td>${item.observaciones}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
 
-        chart.render();
-      },
+    Swal.fire({
+      title: detailData.descripcion,
+      html: `
+        <div class="text-start">
+          <div id="evolutionChart"></div>
+          ${historyTable}
+        </div>`,
+      width: '800px',
+      confirmButtonText: "Cerrar",
       confirmButtonColor: "#00549F",
+      didRender: () => {
+        // Inicializar gráfico de evolución
+        new ApexCharts(document.querySelector("#evolutionChart"), {
+          series: [{
+            name: 'Diferencia',
+            data: chartData
+          }],
+          chart: {
+            type: 'line',
+            height: 250
+          },
+          xaxis: {
+            type: 'datetime'
+          },
+          yaxis: {
+            title: {
+              text: 'Diferencia'
+            }
+          },
+          colors: ['#00549F'],
+          stroke: {
+            curve: 'smooth',
+            width: 2
+          },
+          markers: {
+            size: 4
+          }
+        }).render();
+      }
     });
   } catch (error) {
     console.error("Error:", error);
-    showNotification("error", "Error al procesar los detalles");
+    showNotification("error", "Error al cargar los detalles");
+  }
+}
+
+function getBadgeClass(estado) {
+  switch (estado?.toLowerCase()) {
+    case 'resuelto': return 'bg-success';
+    case 'en proceso': return 'bg-warning';
+    case 'regularizar': return 'bg-info';
+    default: return 'bg-danger';
   }
 }
 
