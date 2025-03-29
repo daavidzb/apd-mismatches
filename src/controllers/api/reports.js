@@ -67,26 +67,19 @@ const get_categories_report = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const get_medicine_evolution = async (req, res) => {
+
+// Api lista de medicamentos
+const get_medicines_list = async (req, res) => {
   try {
-    const { code } = req.params;
     const results = await new Promise((resolve, reject) => {
       connection.query(
         `
-        SELECT 
-          DATE(r.fecha_reporte) as fecha,
-          d.descuadre,
-          d.descripcion,
-          d.codigo_med,
-          COUNT(*) as veces_por_dia
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        WHERE d.codigo_med = ?
-        GROUP BY DATE(r.fecha_reporte), d.descuadre, d.descripcion, d.codigo_med
-        ORDER BY fecha ASC
-        LIMIT 30  -- Mostrar últimos 30 días con descuadres
+        SELECT DISTINCT
+          codigo_med,
+          descripcion
+        FROM descuadres
+        ORDER BY descripcion ASC
         `,
-        [code],
         (error, results) => {
           if (error) {
             console.error("Database error:", error);
@@ -97,19 +90,21 @@ const get_medicine_evolution = async (req, res) => {
       );
     });
 
-    res.json({ evolution: results });
+    res.json({ medicines: results });
   } catch (error) {
-    console.error("Error in get_medicine_evolution:", error);
+    console.error("Error in get_medicines_list:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
+// api comparativa meses para apexcharts
 const get_compare_months = async (req, res) => {
   try {
     const { month1, month2 } = req.params;
     const [year1, m1] = month1.split("-");
     const [year2, m2] = month2.split("-");
 
-    // Obtener totales mensuales
+    // query totales mensuales
     const totalsByMonth = await new Promise((resolve, reject) => {
       connection.query(
         `
@@ -131,7 +126,7 @@ const get_compare_months = async (req, res) => {
       );
     });
 
-    // Obtener top medicamentos
+    // query top medicamentos
     const topMedicines = await new Promise((resolve, reject) => {
       connection.query(
         `
@@ -199,112 +194,159 @@ const get_compare_months = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const update_medicine_management = async (req, res) => {
+
+// api top medicinas
+const get_top_medicines = async (req, res) => {
   try {
-    console.log('Iniciando actualización de medicamento:', req.params.code);
-    const { code } = req.params;
-    const { id_estado, id_categoria, id_motivo, observaciones } = req.body;
+    const month = req.params.month;
 
-    // Obtener el último descuadre del medicamento
-    const [descuadre] = await new Promise((resolve, reject) => {
-      const query = `
-        SELECT d.id_descuadre 
-        FROM descuadres d
-        JOIN reportes r ON d.id_reporte = r.id_reporte
-        WHERE d.codigo_med = ?
-        ORDER BY r.fecha_reporte DESC, d.id_descuadre DESC
-        LIMIT 1`;
+    // Query todos los períodos o un mes específico
+    const query =
+      month === "all"
+        ? `WITH MedicineStats AS (
+              SELECT 
+                  d.codigo_med,
+                  d.descripcion,
+                  COUNT(*) as dias_con_descuadre,
+                  MIN(d.descuadre) as min_descuadre,
+                  MAX(d.descuadre) as max_descuadre,
+                  AVG(ABS(d.descuadre)) as promedio_descuadre,
+                  COUNT(DISTINCT DATE(r.fecha_reporte)) as total_dias_mes
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              GROUP BY d.codigo_med, d.descripcion
+              ORDER BY dias_con_descuadre DESC
+              LIMIT 10
+          )
+          SELECT *
+          FROM MedicineStats`
+        : `WITH MedicineStats AS (
+              SELECT 
+                  d.codigo_med,
+                  d.descripcion,
+                  COUNT(*) as dias_con_descuadre,
+                  MIN(d.descuadre) as min_descuadre,
+                  MAX(d.descuadre) as max_descuadre,
+                  AVG(ABS(d.descuadre)) as promedio_descuadre,
+                  (
+                      SELECT COUNT(DISTINCT DATE(r2.fecha_reporte))
+                      FROM reportes r2
+                      WHERE DATE_FORMAT(r2.fecha_reporte, '%Y-%m') = ?
+                  ) as total_dias_mes
+              FROM descuadres d
+              JOIN reportes r ON d.id_reporte = r.id_reporte
+              WHERE DATE_FORMAT(r.fecha_reporte, '%Y-%m') = ?
+              GROUP BY d.codigo_med, d.descripcion
+              ORDER BY dias_con_descuadre DESC
+              LIMIT 10
+          )
+          SELECT *
+          FROM MedicineStats`;
 
-      console.log('Query para obtener descuadre:', query);
-      console.log('Código medicamento:', code);
+    const params = month === "all" ? [] : [month, month];
 
-      connection.query(query, [code], (error, results) => {
-        if (error) {
-          console.error('Error al obtener descuadre:', error);
-          reject(error);
-        }
-        console.log('Resultado descuadre:', results);
+    const results = await new Promise((resolve, reject) => {
+      connection.query(query, params, (error, results) => {
+        if (error) reject(error);
         resolve(results);
       });
     });
 
-    if (!descuadre) {
-      console.log('No se encontró el descuadre para:', code);
-      return res.status(404).json({ error: "Medicamento no encontrado" });
-    }
-
-    // Insertar la nueva gestión
-    await new Promise((resolve, reject) => {
-      const insertQuery = `
-        INSERT INTO medicamentos_gestionados 
-        (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones)
-        VALUES (?, ?, ?, ?, ?, ?)`;
-
-      const values = [
-        descuadre.id_descuadre,
-        req.user.id_usuario,
-        id_estado,
-        id_categoria,
-        id_motivo,
-        observaciones
-      ];
-
-      console.log('Query de inserción:', insertQuery);
-      console.log('Valores a insertar:', values);
-
-      connection.query(insertQuery, values, (error) => {
-        if (error) {
-          console.error('Error al insertar gestión:', error);
-          reject(error);
-        }
-        console.log('Gestión insertada correctamente');
-        resolve();
-      });
-    });
-
-    console.log('Gestión actualizada correctamente para:', code);
-    res.json({ success: true });
-
+    res.json({ medicines: results });
   } catch (error) {
-    console.error("Error en update_medicine_management:", error);
+    console.error("Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
-const get_analysis_all = async (req, res) => {
-  try {
-    const query = `
-          SELECT DISTINCT d.codigo_med, d.descripcion, 
-                 d.descuadre as ultimo_descuadre,
-                 r.fecha_reporte as fecha_ultimo_descuadre,
-                 COALESCE(e.nombre, 'Pendiente') as estado_gestion,
-                 (SELECT COUNT(*) > 1 AND 
-                  ABS(STDDEV(d2.descuadre)) > 2
-                  FROM descuadres d2 
-                  WHERE d2.codigo_med = d.codigo_med) as tiene_cambios_tendencia
-          FROM descuadres d
-          LEFT JOIN reportes r ON d.id_reporte = r.id_reporte
-          LEFT JOIN (
-              SELECT mg.id_descuadre, e.nombre, mg.id_gestion
-              FROM medicamentos_gestionados mg
-              JOIN estados_descuadre e ON mg.id_estado = e.id_estado
-              WHERE mg.id_gestion IN (
-                  SELECT MAX(id_gestion)
-                  FROM medicamentos_gestionados
-                  GROUP BY id_descuadre
-              )
-          ) gestion ON d.id_descuadre = gestion.id_descuadre
-          LEFT JOIN estados_descuadre e ON gestion.nombre = e.nombre
-          WHERE r.fecha_reporte = (
-              SELECT MAX(fecha_reporte)
-              FROM reportes
-              WHERE DATE_FORMAT(fecha_reporte, '%Y-%m') = ?
-          )`;
 
-    const [results] = await connection.query(query, [req.params.month]);
-    res.json({ analysis: results });
+// api resumen mensual
+const get_month_report = async (req, res) => {
+  try {
+    const { month } = req.params;
+    const query = `
+      WITH UltimaGestion AS (
+        SELECT 
+          d.codigo_med,
+          mg.id_estado,
+          ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+        WHERE ${
+          month === "all" ? "1=1" : 'DATE_FORMAT(r.fecha_reporte, "%Y-%m") = ?'
+        }
+      )
+      SELECT
+        COUNT(DISTINCT codigo_med) as total,
+        SUM(CASE WHEN id_estado = 3 THEN 1 ELSE 0 END) as resueltos,
+        SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) as en_proceso,
+        SUM(CASE WHEN id_estado = 4 THEN 1 ELSE 0 END) as regularizar,
+        SUM(CASE WHEN id_estado IS NULL OR id_estado = 1 THEN 1 ELSE 0 END) as pendientes
+      FROM UltimaGestion
+      WHERE rn = 1`;
+
+    const params = month === "all" ? [] : [month];
+
+    // console.log("query:", query);
+    // console.log("params:", params);
+
+    const results = await new Promise((resolve, reject) => {
+      connection.query(query, params, (error, results) => {
+        if (error) reject(error);
+        const data = results[0] || {
+          total: 0,
+          resueltos: 0,
+          en_proceso: 0,
+          regularizar: 0,
+          pendientes: 0,
+        };
+        // console.log("Query results:", data);
+        resolve(data);
+      });
+    });
+
+    res.json(results);
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Error al obtener datos" });
+    console.error("Error en get_month_report:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// api histórico medicamentos
+const get_medicine_evolution = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const results = await new Promise((resolve, reject) => {
+      connection.query(
+        `
+        SELECT 
+          DATE(r.fecha_reporte) as fecha,
+          d.descuadre,
+          d.descripcion,
+          d.codigo_med,
+          COUNT(*) as veces_por_dia
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        WHERE d.codigo_med = ?
+        GROUP BY DATE(r.fecha_reporte), d.descuadre, d.descripcion, d.codigo_med
+        ORDER BY fecha ASC
+        LIMIT 30  -- Mostrar últimos 30 días con descuadres
+        `,
+        [code],
+        (error, results) => {
+          if (error) {
+            console.error("Database error:", error);
+            reject(error);
+          }
+          resolve(results);
+        }
+      );
+    });
+
+    res.json({ evolution: results });
+  } catch (error) {
+    console.error("Error in get_medicine_evolution:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -312,6 +354,7 @@ module.exports = {
   get_categories_report,
   get_medicine_evolution,
   get_compare_months,
-  update_medicine_management,
-  get_analysis_all,
+  get_top_medicines,
+  get_month_report,
+  get_medicines_list,
 };

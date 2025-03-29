@@ -425,7 +425,7 @@ async function actualizarEstado(id, nuevoEstado) {
 // Cargar categorías para el filtro
 async function loadCategorias() {
     try {
-        const response = await fetch('/api/categorias');
+        const response = await fetch('/api/managed/categorias');
         if (!response.ok) {
             throw new Error('Error al obtener categorías');
         }

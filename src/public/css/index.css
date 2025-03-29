@@ -1296,7 +1296,6 @@ body {
   animation: fadeOut 0.3s ease;
 }
 
-/* Navbar improvements */
 .nav-user-button {
   background: transparent !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1310,7 +1309,6 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* System status indicators */
 .badge.bg-success {
   background-color: #28a745 !important;
   padding: 0.5rem 0.75rem;
@@ -1320,12 +1318,10 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Last update indicator */
 #lastUpdate {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Navbar user button */
 .nav-user-button {
   color: #fff !important;
   padding: 0.5rem 1rem;
@@ -1368,7 +1364,6 @@ body {
   padding: 0.5rem 1rem;
 }
 
-/* Z-index fix for dropdowns */
 .dropdown-menu[data-bs-popper] {
   z-index: 1050;
 }
@@ -1382,7 +1377,6 @@ body {
   animation-duration: 1s;
 }
 
-/* Mejoras visuales para la tabla */
 .dataTables_wrapper .row {
   margin-bottom: 1rem;
 }
@@ -1402,7 +1396,6 @@ body {
   color: #00549f;
 }
 
-/* New styles */
 .btn-outline-purple {
   color: #6f42c1;
   border-color: #6f42c1;
@@ -1416,7 +1409,6 @@ body {
   border-color: #6f42c1;
 }
 
-/* Mejorar la visualización de la tabla */
 .dataTables_wrapper {
   background: #fff;
   padding: 1.5rem;
@@ -1424,7 +1416,6 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Tooltips mejorados */
 .custom-tooltip {
   --bs-tooltip-bg: #2c3e50;
   --bs-tooltip-color: #fff;
@@ -1433,7 +1424,6 @@ body {
   font-size: 0.85rem;
 }
 
-/* Agregar el color púrpura para los temporales */
 .bg-purple {
   background-color: #6f42c1 !important;
 }
@@ -1442,7 +1432,6 @@ body {
   color: #6f42c1 !important;
 }
 
-/* Asegurar que el ícono es visible */
 .icon-shape.bg-purple i {
   color: #fff;
 }
@@ -1456,7 +1445,6 @@ body {
   z-index: 9999;
 }
 
-/* Estilos optimizados para la vista de análisis */
 .month-filter {
   display: flex;
   justify-content: center;
@@ -1474,12 +1462,10 @@ body {
   gap: 0.5rem;
 }
 
-/* Optimización de espaciado */
 .dataTables_wrapper .row:not(:last-child) {
   margin-bottom: 1rem;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .month-filter select {
     width: 100%;
