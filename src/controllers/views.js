@@ -139,18 +139,34 @@ const upload_view = async (req, res) => {
 const mismatches_view = async (req, res) => {
   try {
     const query = `
+      WITH LastState AS (
         SELECT 
-          r.fecha_reporte,
-          COUNT(*) OVER (PARTITION BY r.id_reporte) as total_descuadres,
           d.codigo_med,
           d.descripcion,
-          d.cantidad_farmatools,
-          d.cantidad_armario_apd,
-          d.descuadre
-        FROM reportes r 
-        JOIN descuadres d ON r.id_reporte = d.id_reporte 
-        ORDER BY r.fecha_reporte DESC, d.codigo_med ASC
-      `;
+          d.descuadre,
+          r.fecha_reporte,
+          mg.id_estado,
+          ed.nombre as estado,
+          ed.color,
+          mg.observaciones,
+          ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY r.fecha_reporte DESC) as rn
+        FROM descuadres d
+        JOIN reportes r ON d.id_reporte = r.id_reporte
+        LEFT JOIN (
+          SELECT mg2.* 
+          FROM medicamentos_gestionados mg2
+          INNER JOIN (
+            SELECT id_descuadre, MAX(fecha_gestion) as max_fecha
+            FROM medicamentos_gestionados
+            GROUP BY id_descuadre
+          ) mg3 ON mg2.id_descuadre = mg3.id_descuadre 
+          AND mg2.fecha_gestion = mg3.max_fecha
+        ) mg ON d.id_descuadre = mg.id_descuadre
+        LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
+      )
+      SELECT * FROM LastState 
+      WHERE rn = 1
+      ORDER BY fecha_reporte DESC`;
 
     const results = await new Promise((resolve, reject) => {
       connection.query(query, (error, results) => {
@@ -160,11 +176,12 @@ const mismatches_view = async (req, res) => {
     });
 
     res.render("mismatches", {
-      descuadres: results,
-      title: "Descuadres",
+      title: "Inventario Detallado",
+      active: "mismatches",
+      mismatches: results || [], // Aseguramos que siempre haya un array
     });
   } catch (error) {
-    console.log(error);
+    console.error("Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

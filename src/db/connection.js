@@ -4,7 +4,7 @@ const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'hunj-backup-0328',
+    database: 'hunj',
     multipleStatements: true
 })
 connection.connect((error) => {

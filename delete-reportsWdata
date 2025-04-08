@@ -1,0 +1,11 @@
+START TRANSACTION;
+
+-- Eliminar descuadres de múltiples reportes
+DELETE FROM descuadres 
+WHERE id_reporte IN (1, 2, 3); -- Reemplaza con los IDs de reporte que quieras eliminar
+
+-- Eliminar los reportes
+DELETE FROM reportes 
+WHERE id_reporte IN (1, 2, 3); -- Mismos IDs que arriba
+
+COMMIT;

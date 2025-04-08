@@ -22,39 +22,56 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'upload'}) %>
-    <div class="container my-4">
+    <div class="container-fluid my-4">
       <div class="row">
-        <div class="col-md-6 mx-auto">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title mb-4">
+        <!-- Panel de carga -->
+        <div class="col-lg-8 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+              <h5 class="card-title mb-0">
                 <i class="bi bi-cloud-upload me-2"></i>
-                Subir archivos de descuadres
+                Subir archivos
               </h5>
+            </div>
+            <div class="card-body">
               <form id="uploadForm" enctype="multipart/form-data">
-                <div class="mb-3">
-                  <label for="fileInput" class="form-label">
-                    Seleccione los archivos Excel (.xlsx, .xls)
-                  </label>
-                  <input
-                    type="file"
-                    class="form-control"
-                    id="fileInput"
-                    name="files"
-                    accept=".xlsx,.xls"
-                    required
-                  />
+                <div id="dropZone" class="drop-zone">
+                  <input type="file" id="fileInput" multiple accept=".xlsx" class="d-none">
+                  <div id="selectedFiles" class="selected-files">
+                    <div class="text-center text-muted p-4">
+                      <i class="bi bi-cloud-arrow-up fs-1"></i>
+                      <p class="mt-2">Arrastra archivos aquí o haz clic para seleccionar</p>
+                    </div>
+                  </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">
-                  <i class="bi bi-upload me-2"></i>
-                  Subir archivos
-                </button>
               </form>
+            </div>
+            <div class="card-footer bg-white">
+              <div class="d-flex justify-content-end">
+                <button type="submit" id="uploadButton" form="uploadForm" class="btn btn-primary" disabled>
+                  <i class="bi bi-upload me-2"></i>Subir archivos
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de archivos seleccionados -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-list-check me-2"></i>
+                Archivos seleccionados
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div id="filesList" class="file-list" style="max-height: calc(100vh - 250px); overflow-y: auto;">
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div id="uploadResults" class="mt-4"></div>
     </div>
     <%- include('partials/footer') %>
     <script src="/public/js/upload.js"></script>

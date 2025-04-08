@@ -10,7 +10,7 @@ const dataTableEsES = {
     "loadingRecords": "Cargando...",
     "processing": "Procesando...",
     "search": "Buscar:",
-    "zeroRecords": "No se encontraron coincidencias",
+    "zeroRecords": "No se encontraron medicamentos",
     "paginate": {
         "first": "Primero",
         "last": "Último",

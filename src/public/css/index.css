@@ -1481,3 +1481,268 @@ body {
     flex-wrap: wrap;
   }
 }
+
+/* Estilos para la tabla de inventario detallado */
+#descuadresTable {
+  width: 100% !important;
+  margin-bottom: 0;
+}
+
+#descuadresTable th,
+#descuadresTable td {
+  padding: 0.75rem;
+}
+
+/* Permitir que la descripción se ajuste */
+#descuadresTable td:nth-child(3) {
+  white-space: normal;
+  min-width: 300px;
+}
+
+/* Alinear columnas numéricas */
+#descuadresTable td.text-end {
+  text-align: right;
+}
+
+/* Contenedor responsive */
+.table-responsive {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Ajustes DataTables */
+.dataTables_wrapper {
+  padding: 0;
+  width: 100%;
+}
+
+.dataTables_length,
+.dataTables_filter {
+  margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #descuadresTable td:nth-child(3) {
+    min-width: 200px;
+  }
+
+  .dataTables_length,
+  .dataTables_filter {
+    text-align: left;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Estilos para el modal de historial */
+.swal2-modal {
+  padding: 2rem;
+}
+
+.swal2-modal .table-responsive {
+  margin: 0;
+  border: none;
+}
+
+.swal2-modal .sticky-top {
+  top: 0;
+  z-index: 1021;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilos para la zona de drop */
+.drop-zone {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  min-height: 200px;
+}
+
+.drop-zone.dragover {
+  border-color: #00549F;
+  background-color: rgba(0, 84, 159, 0.05);
+}
+
+/* Estilos para la lista de archivos */
+.selected-files-preview {
+  margin-top: 1rem;
+}
+
+.file-icon {
+  font-size: 1.5rem;
+}
+
+.list-group-item {
+  background-color: #f8f9fa;
+  border: none;
+  margin-bottom: 0.5rem;
+  border-radius: 6px !important;
+  transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+  background-color: #f1f3f5;
+  transform: translateX(4px);
+}
+
+.remove-file {
+  padding: 0.25rem 0.5rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.remove-file:hover {
+  opacity: 1;
+}
+
+.file-count {
+  display: inline-block;
+}
+
+.file-count .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+#uploadButton {
+  min-width: 140px;
+}
+
+.file-list {
+  border-top: 1px solid #dee2e6;
+}
+
+.file-list .card {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #dee2e6;
+  margin: 0;
+}
+
+.file-list .card:last-child {
+  border-bottom: none;
+}
+
+.file-count-badge {
+  background-color: #e9ecef;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-icon {
+  font-size: 1.25rem;
+  color: #217346;
+}
+
+.remove-file {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.remove-file:hover {
+  opacity: 1;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.file-item-new {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Scrollbar personalizado */
+.file-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.file-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.file-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.file-item-new {
+    transition: all 0.3s ease;
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0 !important;
+    margin-bottom: 0;
+}
+
+.file-item-new:last-child {
+    border-bottom: none;
+}
+
+.file-item-new:hover {
+    background-color: #f8f9fa;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0; /* Importante para que text-truncate funcione */
+}
+
+.file-icon {
+    min-width: 40px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e9ecef;
+    border-radius: 50%;
+}
+
+.file-icon i {
+    font-size: 1.2rem;
+}
+
+.remove-file {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.remove-file:hover {
+    opacity: 1;
+    background-color: #fee2e2;
+    border-radius: 50%;
+}
+
+/* Tooltip personalizado para nombres largos */
+[title] {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Animación para nuevos archivos */
+.file-item-new {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

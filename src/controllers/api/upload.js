@@ -1,63 +1,89 @@
-const connection = require('../../db/connection')
+const multer = require("multer");
+const path = require("path");
+const xlsx = require("xlsx");
+const connection = require("../../db/connection");
 
-// api subida de archivos excel
-const upload_excel = async (req, res) => {
-  try {
-    console.log("1. Iniciando proceso de subida de archivo");
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../../public/uploads"));
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
 
-    const upload = multer({
-      storage: multer.diskStorage({
-        destination: (req, file, callback) => {
-          console.log("2. Archivo recibido:", file.originalname);
-          console.log("   Mimetype:", file.mimetype);
-          callback(null, "./src/public/uploads/excel");
-        },
-        filename: (req, file, callback) => {
-          console.log("3. Guardando archivo como:", file.originalname);
-          callback(null, file.originalname);
-        },
-      }),
-      fileFilter: (req, file, callback) => {
-        let ext = path.extname(file.originalname);
-        console.log("4. Validando extensión:", ext);
-        console.log("   Tipo MIME:", file.mimetype);
+const fileFilter = (req, file, cb) => {
+  const validMimeTypes = [
+    "application/vnd.ms-excel", // .xls
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+    "application/excel",
+    "application/x-excel",
+    "application/x-msexcel",
+    "application/octet-stream",
+  ];
 
-        if (ext !== ".xlsx" && ext !== ".xls") {
-          console.log("   ❌ Extensión no válida");
-          return callback(
-            new Error("Solo archivos .xlsx o .xls [SOLO EXCEL]"),
-            false
-          );
-        }
-        console.log("   ✅ Extensión válida");
-        callback(null, true);
-      },
-    }).array("files");
+  const ext = path.extname(file.originalname).toLowerCase();
+  const isValidExt = [".xlsx", ".xls"].includes(ext);
+  console.log("File MIME type:", file.mimetype);
+  console.log("File extension:", ext);
 
-    upload(req, res, async (error) => {
-      if (error) {
-        console.error("5. ❌ Error en upload:", error.message);
-        return res.status(400).json({ error: error.message });
+  if (isValidExt || validMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Solo se permiten archivos Excel (.xlsx, .xls)"));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB por archivo
+    files: 10, // 10 archivos
+  },
+}).array("files", 10); // hasta 10 archivos
+
+const processUpload = (req, res) => {
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(400)
+          .json({ error: "Archivo demasiado grande. Máximo 50MB" });
+      }
+      if (err.code === "LIMIT_FILE_COUNT") {
+        return res
+          .status(400)
+          .json({ error: "Demasiados archivos. Máximo 10" });
+      }
+      console.error("Error de Multer:", err);
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      console.error("Error al subir:", err);
+      return res.status(400).json({ error: err.message });
+    }
+
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          error: "No se han seleccionado archivos",
+        });
       }
 
-      console.log("5. ✅ Archivos subidos correctamente");
-      console.log("   Cantidad de archivos:", req.files?.length);
+      console.log("Archivos recibidos:", req.files);
 
       const results = [];
 
+      // Procesar archivos secuencialmente con async/await
       for (const file of req.files) {
         try {
-          console.log("\n6. Procesando archivo:", file.originalname);
-          console.log("   Path:", file.path);
-          console.log("   Size:", file.size, "bytes");
-
-          // Extraer fecha del nombre del archivo
           const dateMatch = file.originalname.match(
             /APD_descuadrado_(\d{4})_(\d{2})_(\d{2})/
           );
           if (!dateMatch) {
             results.push({
-              filename: file.originalname,
+              fileName: file.originalname,
+              status: "error",
               error: true,
               razon: "Formato de nombre inválido",
             });
@@ -70,29 +96,29 @@ const upload_excel = async (req, res) => {
             dateMatch[3]
           );
 
-          // Verificar reporte existente
-          const existingReport = await new Promise((resolve, reject) => {
+          // Verificar duplicados usando Promise
+          const existingReports = await new Promise((resolve, reject) => {
             connection.query(
               "SELECT id_reporte FROM reportes WHERE DATE(fecha_reporte) = DATE(?)",
               [reportDate],
               (error, results) => {
                 if (error) reject(error);
-                resolve(results[0]);
+                resolve(results);
               }
             );
           });
 
-          if (existingReport) {
+          if (existingReports && existingReports.length > 0) {
             results.push({
-              filename: file.originalname,
-              error: true,
-              razon: "Reporte duplicado",
+              fileName: file.originalname,
+              status: "duplicate",
+              date: reportDate,
               detalles: `Ya existe un reporte para la fecha ${reportDate.toLocaleDateString()}`,
             });
             continue;
           }
 
-          // Procesar el archivo usando el método que funciona
+          // Procesar archivo Excel
           const workbook = xlsx.readFile(file.path);
           const sheet_name_list = workbook.SheetNames;
           const rawData = xlsx.utils.sheet_to_json(
@@ -159,6 +185,18 @@ const upload_excel = async (req, res) => {
             (item) => item.isInvalid
           );
 
+          if (validMedicines.length === 0) {
+            results.push({
+              fileName: file.originalname,
+              status: "error",
+              error: true,
+              razon: "No se encontraron datos válidos en el archivo",
+            });
+            continue;
+          }
+
+          //   console.log("Datos procesados:", validMedicines);
+
           // Insertar reporte
           const reportResult = await new Promise((resolve, reject) => {
             connection.query(
@@ -171,110 +209,64 @@ const upload_excel = async (req, res) => {
             );
           });
 
-          // Insertar descuadres
-          // En la función upload_excel, modificar la inserción de descuadres:
+          const values = validMedicines.map((row) => [
+            reportResult.insertId,
+            row.num_almacen,
+            row.codigo_med,
+            row.descripcion,
+            row.cantidad_farmatools,
+            row.cantidad_armario_apd,
+            row.descuadre,
+          ]);
 
-          // Después de insertar los descuadres
-          if (validMedicines.length > 0) {
-            await new Promise((resolve, reject) => {
-              // Primero, verificar si alguno de estos medicamentos tenía estado 'Resuelto'
-              const codigos = validMedicines.map((item) => item.codigo_med);
-              connection.query(
-                `
-                    SELECT DISTINCT d.codigo_med 
-                    FROM descuadres d
-                    JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
-                    WHERE d.codigo_med IN (?) 
-                    AND mg.id_estado = 3
-                    AND mg.id_gestion = (
-                        SELECT MAX(mg2.id_gestion)
-                        FROM medicamentos_gestionados mg2
-                        JOIN descuadres d2 ON mg2.id_descuadre = d2.id_descuadre
-                        WHERE d2.codigo_med = d.codigo_med
-                    )`,
-                [codigos],
-                async (error, resueltos) => {
-                  if (error) reject(error);
-
-                  // Insertar descuadres
-                  connection.query(
-                    "INSERT INTO descuadres (id_reporte, num_almacen, codigo_med, descripcion, cantidad_farmatools, cantidad_armario_apd, descuadre) VALUES ?",
-                    [
-                      validMedicines.map((item) => [
-                        reportResult.insertId,
-                        item.num_almacen,
-                        item.codigo_med,
-                        item.descripcion,
-                        item.cantidad_farmatools,
-                        item.cantidad_armario_apd,
-                        item.descuadre,
-                      ]),
-                    ],
-                    async (error, result) => {
-                      if (error) reject(error);
-
-                      const firstId = result.insertId;
-                      const resueltosSet = new Set(
-                        resueltos.map((r) => r.codigo_med)
-                      );
-
-                      // Crear gestiones iniciales
-                      const values = validMedicines.map((item, index) => [
-                        firstId + index, // id_descuadre
-                        req.user.id_usuario, // id_usuario
-                        1, // id_estado siempre Pendiente (1)
-                        null, // id_categoria
-                        null, // id_motivo
-                        resueltosSet.has(item.codigo_med)
-                          ? "Reapertura automática - Medicamento previamente resuelto"
-                          : "Descuadre inicial", // observaciones
-                      ]);
-
-                      // Insertar gestiones
-                      connection.query(
-                        "INSERT INTO medicamentos_gestionados (id_descuadre, id_usuario, id_estado, id_categoria, id_motivo, observaciones) VALUES ?",
-                        [values],
-                        (error) => {
-                          if (error) reject(error);
-                          resolve();
-                        }
-                      );
-                    }
-                  );
-                }
-              );
-            });
-          }
-
-          results.push({
-            filename: file.originalname,
-            fecha: reportDate,
-            procesado: true,
-            medicamentosValidos: validMedicines.length,
-            medicamentosInvalidos: invalidMedicines,
+          await new Promise((resolve, reject) => {
+            connection.query(
+              `INSERT INTO descuadres 
+               (id_reporte, num_almacen, codigo_med, descripcion, cantidad_farmatools, cantidad_armario_apd, descuadre) 
+               VALUES ?`,
+              [values],
+              (error) => {
+                if (error) reject(error);
+                resolve();
+              }
+            );
           });
 
-          console.log("7. ✅ Archivo procesado correctamente");
-        } catch (error) {
-          console.error("7. ❌ Error procesando archivo:", error.message);
           results.push({
-            filename: file.originalname,
+            fileName: file.originalname,
+            status: "success",
+            processed: {
+              total: validMedicines.length,
+              valid: validMedicines.length,
+              invalid: invalidMedicines.length,
+            },
+            detalles: "Archivo procesado correctamente",
+          });
+        } catch (fileError) {
+          console.error(`Error procesando ${file.originalname}:`, fileError);
+          results.push({
+            fileName: file.originalname,
+            status: "error",
             error: true,
-            razon: "Error al procesar el archivo",
-            detalles: error.message,
+            razon: fileError.message || "Error al procesar el archivo",
           });
         }
       }
 
-      console.log("8. Proceso completado");
-      res.json({ success: true, results });
-    });
-  } catch (error) {
-    console.error("Error general:", error);
-    res.status(500).json({ error: error.message });
-  }
+      res.json({
+        message: "Archivos procesados",
+        results: results,
+      });
+    } catch (error) {
+      console.error("Error en processUpload:", error);
+      res.status(500).json({
+        error: "Error al procesar los archivos",
+        details: error.message,
+      });
+    }
+  });
 };
 
 module.exports = {
-    upload_excel
-}
+  processUpload,
+};

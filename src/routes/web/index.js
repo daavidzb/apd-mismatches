@@ -2,10 +2,12 @@ const router = require('express').Router();
 const { isAuthenticated } = require('../../auth/middleware');
 const reports = require('../../controllers/api/reports.js')
 const views = require('../../controllers/views.js')
-const upload = require('../../controllers/api/upload.js')
+// const upload = require('../../controllers/api/upload.js')
 const sync = require('../../controllers/api/sync.js')
 const manage = require('../../controllers/api/manage.js')
 const dashboard = require('../../controllers/api/dashboard.js')
+const mismatches = require('../../controllers/api/mismatches.js')
+const { processUpload } = require('../../controllers/api/upload');
 
 // Vistas 
 
@@ -20,7 +22,7 @@ router.get('/managed', isAuthenticated, views.managed_view);
 router.get('/dashboard', isAuthenticated, views.dashboard_view);
 
 // api subida archivos
-router.post('/api/upload', upload.upload_excel)
+router.post('/api/upload', processUpload)
 
 // apis para reportes
 router.get('/api/reports/categories/:month', reports.get_categories_report);
@@ -48,5 +50,6 @@ router.get('/api/managed/categorias', manage.get_categorias);
 router.get('/api/dashboard/trend', dashboard.get_trend_data);
 router.get('/api/dashboard/states', dashboard.get_state_distribution);
 
+router.get('/api/mismatches/history/:code', mismatches.get_mismatches_history);
 
 module.exports.router = router
