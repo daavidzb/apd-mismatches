@@ -56,109 +56,103 @@ document.addEventListener("DOMContentLoaded", function () {
         language: dataTableEsES,
         columns: [
           {
+            data: "fecha_ultimo_reporte",
+            title: "Fecha",
+            width: "100px",
+            render: function (data) {
+              return new Date(data).toLocaleDateString();
+            },
+          },
+          {
             data: "codigo_med",
             title: "Código",
+            width: "90px",
           },
           {
             data: "descripcion",
             title: "Descripción",
-            render: function (data, type, row) {
-              if (type === "display") {
-                let icon = "";
-                if (row.tipo_patron === "temporal") {
-                  icon = `<i class="bi bi-clock-history text-purple ms-2" 
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="right" 
-                                        title="Este medicamento solo ha aparecido una vez (Temporal)"></i>`;
-                } else if (row.tipo_patron === "regular") {
-                  icon = `<i class="bi bi-arrow-repeat text-info ms-2" 
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="right" 
-                                        title="Este medicamento mantiene un patrón regular"></i>`;
-                } else if (row.tipo_patron === "cambios") {
-                  icon = `<i class="bi bi-exclamation-triangle-fill text-warning ms-2" 
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="right" 
-                                        title="Este medicamento presenta cambios significativos"></i>`;
-                }
-                return `<span>${data}</span>${icon}`;
-              }
-              return data;
+            width: "300px",
+            render: function (data) {
+              const shortDesc =
+                data.length > 35 ? data.substring(0, 35) + "..." : data;
+              return `<span class="text-truncate" title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
             },
           },
           {
             data: "ultimo_descuadre",
             title: "Diferencia",
-            defaultContent: "0",
+            width: "100px",
             className: "text-end",
-            render: function (data) {
+            render: function(data, type, row) {
               const value = data || 0;
               const colorClass = value < 0 ? "text-danger" : "text-success";
-              return `<strong class="${colorClass}">${value}</strong>`;
-            },
+              let tooltip = "";
+              let icon = "";
+
+              switch(row.tipo_patron) {
+                case "regular":
+                  tooltip = "Mantiene un patrón constante";
+                  icon = "bi bi-arrow-repeat";
+                  break;
+                case "temporal":
+                  tooltip = "Descuadre temporal - Puede resolverse solo";
+                  icon = "bi bi-clock-history";
+                  break;
+                default:
+                  tooltip = "Presenta cambios significativos - Requiere revisión";
+                  icon = "bi bi-exclamation-triangle";
+              }
+
+              return `
+                <div class="d-inline-flex align-items-center">
+                  <span 
+                    class="${colorClass}" 
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="right"
+                    data-bs-custom-class="custom-tooltip"
+                    data-bs-html="true"
+                    title="<i class='${icon} me-2'></i>${tooltip}"
+                  >
+                    <strong>${value}</strong>
+                  </span>
+                </div>`;
+            }
           },
           {
             data: "estado_gestion",
             title: "Estado",
-            defaultContent: "Pendiente",
+            width: "120px",
             className: "text-center",
             render: function (data) {
-              let badgeClass = "bg-secondary";
-              let tooltipText = "";
-
-              switch (data) {
-                case "Pendiente":
-                  badgeClass = "bg-danger";
-                  tooltipText = "Este medicamento está pendiente de gestión";
-                  break;
-                case "En proceso":
-                  badgeClass = "bg-warning";
-                  tooltipText = "Este medicamento está siendo gestionado";
-                  break;
-                case "Corregido":
-                  badgeClass = "bg-success";
-                  tooltipText = "Este medicamento ha sido corregido";
-                  break;
-                case "Regularizar":
-                  badgeClass = "bg-info";
-                  tooltipText =
-                    "Este medicamento mantiene un patrón constante de descuadre";
-                  break;
-                default:
-                  badgeClass = "bg-secondary";
-                  tooltipText = "Estado no definido";
-              }
-
-              return `<span class="badge ${badgeClass}" 
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="top" 
-                                                title="${tooltipText}">${data}</span>`;
+              let badgeClass = getBadgeClass(data);
+              return `<span class="badge ${badgeClass}">${data}</span>`;
             },
           },
           {
             data: null,
             title: "Acciones",
+            width: "100px",
             className: "text-center",
             orderable: false,
             render: function (data) {
               return `
-                                                <div class="btn-group">
-                                                    <button class="btn btn-primary btn-sm ver-detalle" 
-                                                            data-codigo="${data.codigo_med}"
-                                                            title="Ver histórico y tendencias">
-                                                        <i class="bi bi-graph-up"></i> Ver Detalle
-                                                    </button>
-                                                    <button class="btn btn-success btn-sm ms-2 gestionar" 
-                                                            data-codigo="${data.codigo_med}" 
-                                                            data-descripcion="${data.descripcion}"
-                                                            title="Gestionar descuadre">
-                                                        <i class="bi bi-pencil-square"></i> Gestionar
-                                                    </button>
-                                                </div>`;
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-primary btn-sm ver-detalle" 
+                          data-codigo="${data.codigo_med}"
+                          title="Ver histórico">
+                    <i class="bi bi-graph-up"></i>
+                  </button>
+                  <button class="btn btn-outline-success btn-sm gestionar" 
+                          data-codigo="${data.codigo_med}" 
+                          data-descripcion="${data.descripcion}"
+                          title="Gestionar">
+                    <i class="bi bi-pencil-square"></i>
+                  </button>
+                </div>`;
             },
           },
         ],
-        order: [[1, "asc"]],
+        order: [[0, "desc"]], // Ordenar por fecha descendente
         dom: `
               <"row mb-3"
                 <"col-sm-12 col-md-4"l>
@@ -172,11 +166,13 @@ document.addEventListener("DOMContentLoaded", function () {
               <"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>
             `,
         drawCallback: function () {
-          const tooltips = document.querySelectorAll(
-            '[data-bs-toggle="tooltip"]'
-          );
-          tooltips.forEach((tooltip) => {
-            new bootstrap.Tooltip(tooltip);
+          // Destruir tooltips existentes
+          $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+          
+          // Reinicializar tooltips
+          $('[data-bs-toggle="tooltip"]').tooltip({
+            container: 'body',
+            html: true
           });
         },
         initComplete: function () {
@@ -388,101 +384,190 @@ async function showMedicineDetails(codigo, month) {
   try {
     const [detailResponse, historyResponse] = await Promise.all([
       fetch(`/api/analysis/detail/${month}/${codigo}`),
-      fetch(`/api/analysis/history/${codigo}/${month}`)
+      fetch(`/api/analysis/history/${codigo}/${month}`),
     ]);
 
     const detailData = await detailResponse.json();
     const historyData = await historyResponse.json();
 
-    // Crear gráfico de evolución
-    const chartData = historyData.map(item => ({
-      x: new Date(item.fecha_reporte).getTime(),
-      y: item.descuadre
-    }));
-
-    // Crear tabla de historial
-    const historyTable = `
-      <div class="table-responsive mt-4">
-        <table class="table table-sm table-hover">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th class="text-end">Diferencia</th>
-              <th>Estado</th>
-              <th>Observaciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${historyData.map(item => `
-              <tr>
-                <td>${new Date(item.fecha_reporte).toLocaleDateString()}</td>
-                <td class="text-end ${item.descuadre > 0 ? 'text-success' : 'text-danger'}">
-                  ${item.descuadre}
-                </td>
-                <td>
-                  <span class="badge ${getBadgeClass(item.estado)}">
-                    ${item.estado || 'Pendiente'}
-                  </span>
-                </td>
-                <td>${item.observaciones}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>`;
-
     Swal.fire({
-      title: detailData.descripcion,
+      title: false,
       html: `
-        <div class="text-start">
-          <div id="evolutionChart"></div>
-          ${historyTable}
+        <div class="modal-header border-bottom">
+          <div class="d-flex align-items-center w-100">
+            <div class="bg-light rounded-circle p-3 me-3">
+              <i class="bi bi-capsule fs-4 text-primary"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h4 class="mb-1 text-dark">${detailData.medicina.descripcion}</h4>
+              <div class="badge bg-light text-dark fs-6">
+                <i class="bi bi-upc-scan me-2"></i>${detailData.medicina.codigo_med}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4">
+          <!-- Nav tabs -->
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" data-bs-toggle="tab" href="#history" role="tab">
+                <i class="bi bi-clock-history me-2"></i>Histórico
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-bs-toggle="tab" href="#stats" role="tab">
+                <i class="bi bi-graph-up me-2"></i>Estadísticas
+              </a>
+            </li>
+          </ul>
+
+          <!-- Tab panes -->
+          <div class="tab-content">
+            <!-- Histórico Tab -->
+            <div class="tab-pane active" id="history" role="tabpanel">
+              <div class="table-responsive mb-4" style="max-height: 300px;">
+                <table class="table table-sm table-hover">
+                  <thead class="sticky-top bg-white">
+                    <tr>
+                      <th>Fecha</th>
+                      <th class="text-end">Diferencia</th>
+                      <th>Estado</th>
+                      <th>Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${historyData.map(item => `
+                      <tr>
+                        <td>${new Date(item.fecha_reporte).toLocaleDateString()}</td>
+                        <td class="text-end ${item.descuadre > 0 ? 'text-success' : 'text-danger'}">
+                          <strong>${item.descuadre}</strong>
+                        </td>
+                        <td>
+                          <span class="badge ${getBadgeClass(item.estado)}">
+                            ${item.estado || 'Pendiente'}
+                          </span>
+                        </td>
+                        <td>${item.observaciones || '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div id="evolutionChart"></div>
+            </div>
+
+            <!-- Estadísticas Tab -->
+            <div class="tab-pane" id="stats" role="tabpanel">
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small mb-2">Total registros</div>
+                      <h3 class="mb-0">${historyData.length}</h3>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small mb-2">Promedio</div>
+                      <h3 class="mb-0">${Math.round(historyData.reduce((acc, curr) => acc + curr.descuadre, 0) / historyData.length)}</h3>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small mb-2">Máx. diferencia</div>
+                      <h3 class="mb-0">${Math.max(...historyData.map(i => Math.abs(i.descuadre)))}</h3>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small mb-2">Últ. descuadre</div>
+                      <h3 class="mb-0 ${historyData[0]?.descuadre > 0 ? 'text-success' : 'text-danger'}">
+                        ${historyData[0]?.descuadre || 0}
+                      </h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>`,
-      width: '800px',
+      width: '900px',
+      padding: 0,
+      customClass: {
+        container: 'modal-backdrop-fix',
+        popup: 'modal-content-scrollable'
+      },
       confirmButtonText: "Cerrar",
       confirmButtonColor: "#00549F",
-      didRender: () => {
-        // Inicializar gráfico de evolución
+      didOpen: () => {
+        // Inicializar tooltips y tabs
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(t => new bootstrap.Tooltip(t));
+        
+        // Inicializar tabs de Bootstrap
+        const tabElements = document.querySelectorAll('a[data-bs-toggle="tab"]');
+        tabElements.forEach(tab => new bootstrap.Tab(tab));
+
+        // Renderizar gráfico
         new ApexCharts(document.querySelector("#evolutionChart"), {
           series: [{
-            name: 'Diferencia',
-            data: chartData
+            name: "Diferencia",
+            data: historyData.map(item => ({
+              x: new Date(item.fecha_reporte).getTime(),
+              y: item.descuadre
+            }))
           }],
           chart: {
             type: 'line',
-            height: 250
+            height: 250,
+            toolbar: { show: true },
+            animations: { enabled: true }
           },
-          xaxis: {
-            type: 'datetime'
-          },
-          yaxis: {
-            title: {
-              text: 'Diferencia'
-            }
-          },
-          colors: ['#00549F'],
           stroke: {
             curve: 'smooth',
-            width: 2
+            width: 3
           },
-          markers: {
-            size: 4
-          }
+          markers: { size: 4 },
+          xaxis: {
+            type: 'datetime',
+            labels: { format: 'dd/MM/yy' }
+          },
+          yaxis: {
+            title: { text: 'Diferencia' }
+          },
+          tooltip: {
+            x: { format: 'dd MMM yyyy' }
+          },
+          colors: ['#00549F']
         }).render();
       }
     });
   } catch (error) {
     console.error("Error:", error);
-    showNotification("error", "Error al cargar los detalles");
+    showNotification("error", "No se pudieron cargar los detalles");
   }
 }
 
 function getBadgeClass(estado) {
   switch (estado?.toLowerCase()) {
-    case 'resuelto': return 'bg-success';
-    case 'en proceso': return 'bg-warning';
-    case 'regularizar': return 'bg-info';
-    default: return 'bg-danger';
+    case "resuelto":
+    case "corregido":
+      return "bg-success"; // Verde
+    case "en proceso":
+      return "bg-warning"; // Amarillo
+    case "regularizar":
+      return "bg-info"; // Azul info
+    case "pendiente":
+      return "bg-secondary"; // Gris
+    default:
+      return "bg-secondary";
   }
 }
 

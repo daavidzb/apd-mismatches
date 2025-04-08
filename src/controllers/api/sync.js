@@ -6,10 +6,9 @@ const get_analysis = async (req, res) => {
     let filterClause = "";
     let params = [];
 
-    // Corregir el manejo del filtro por mes
     if (month && month !== "all") {
       const [year, m] = month.split("-");
-      filterClause = `AND YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?`;
+      filterClause = "WHERE YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
       params = [year, m];
     }
 
@@ -19,11 +18,11 @@ const get_analysis = async (req, res) => {
         d.codigo_med,
         d.descripcion,
         d.descuadre as ultimo_descuadre,
-        r.fecha_reporte,
+        r.fecha_reporte as fecha_ultimo_reporte,
         ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY r.fecha_reporte DESC) as rn
       FROM descuadres d
       JOIN reportes r ON d.id_reporte = r.id_reporte
-      WHERE 1=1 ${filterClause}
+      ${filterClause}
     ),
     PatronDescuadres AS (
       SELECT 
@@ -57,6 +56,7 @@ const get_analysis = async (req, res) => {
       ld.codigo_med,
       ld.descripcion,
       ld.ultimo_descuadre,
+      ld.fecha_ultimo_reporte,
       CASE 
         WHEN ug.id_estado = 4 OR 
              (pd.total_apariciones > 1 AND pd.es_constante = 1)
@@ -74,15 +74,17 @@ const get_analysis = async (req, res) => {
     JOIN PatronDescuadres pd ON ld.codigo_med = pd.codigo_med
     LEFT JOIN UltimaGestion ug ON ld.codigo_med = ug.codigo_med AND ug.rn = 1
     WHERE ld.rn = 1
-    ORDER BY ld.descripcion`;
+    ORDER BY ld.fecha_ultimo_reporte DESC, ld.descripcion`;
 
-    connection.query(query, params, (error, results) => {
-      if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ error: error.message });
-      }
-      res.json({ analysis: results || [] });
+    const results = await new Promise((resolve, reject) => {
+      connection.query(query, params, (error, results) => {
+        if (error) reject(error);
+        resolve(results);
+      });
     });
+
+    res.json({ analysis: results || [] });
+
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: error.message });
@@ -496,7 +498,8 @@ const get_medicine_history = async (req, res) => {
 
     if (month && month !== "all") {
       const [year, m] = month.split("-");
-      filterClause = "AND YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
+      filterClause =
+        "AND YEAR(r.fecha_reporte) = ? AND MONTH(r.fecha_reporte) = ?";
       params.push(year, m);
     }
 

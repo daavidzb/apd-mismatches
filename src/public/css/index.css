@@ -1563,7 +1563,7 @@ body {
 }
 
 .drop-zone.dragover {
-  border-color: #00549F;
+  border-color: #00549f;
   background-color: rgba(0, 84, 159, 0.05);
 }
 
@@ -1652,8 +1652,14 @@ body {
 
 /* Animaciones */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .file-item-new {
@@ -1679,70 +1685,284 @@ body {
 }
 
 .file-item-new {
-    transition: all 0.3s ease;
-    border: none;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 0 !important;
-    margin-bottom: 0;
+  transition: all 0.3s ease;
+  border: none;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 0 !important;
+  margin-bottom: 0;
 }
 
 .file-item-new:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .file-item-new:hover {
-    background-color: #f8f9fa;
+  background-color: #f8f9fa;
 }
 
 .file-info {
-    flex: 1;
-    min-width: 0; /* Importante para que text-truncate funcione */
+  flex: 1;
+  min-width: 0; /* Importante para que text-truncate funcione */
 }
 
 .file-icon {
-    min-width: 40px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #e9ecef;
-    border-radius: 50%;
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  border-radius: 50%;
 }
 
 .file-icon i {
-    font-size: 1.2rem;
+  font-size: 1.2rem;
 }
 
 .remove-file {
-    opacity: 0.6;
-    transition: opacity 0.2s;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .remove-file:hover {
-    opacity: 1;
-    background-color: #fee2e2;
-    border-radius: 50%;
+  opacity: 1;
+  background-color: #fee2e2;
+  border-radius: 50%;
 }
 
 /* Tooltip personalizado para nombres largos */
 [title] {
-    position: relative;
-    cursor: pointer;
+  position: relative;
+  cursor: pointer;
 }
 
 /* Animación para nuevos archivos */
 .file-item-new {
-    animation: slideIn 0.3s ease;
+  animation: slideIn 0.3s ease;
 }
 
 @keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.swal-height-auto {
+  height: auto !important;
+}
+
+.modal-content-scrollable {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.table thead.sticky-top {
+  z-index: 999;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card.bg-light {
+  border: none;
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Modal styles */
+.modal-content-scrollable {
+  height: 100vh !important;
+  background: white !important;
+}
+
+.swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-header {
+  background: white;
+}
+
+/* Table styles */
+.text-truncate {
+  max-width: 300px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* Tooltip styles */
+[data-bs-toggle="tooltip"] {
+  cursor: help;
+}
+
+/* Modal styles */
+.swal2-container {
+  padding: 0 !important;
+}
+
+.swal2-popup {
+  padding: 0 !important;
+  width: 900px !important;
+}
+
+.swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.modal-content-scrollable {
+  max-height: 85vh !important;
+  overflow-y: auto;
+}
+
+/* Tooltip styles */
+[data-bs-toggle="tooltip"] {
+  cursor: help;
+}
+
+.tooltip {
+  --bs-tooltip-bg: #2c3e50;
+  --bs-tooltip-color: #fff;
+  z-index: 99999;
+}
+
+.tooltip .tooltip-inner {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.tooltip i {
+  opacity: 0.9;
+}
+
+.tooltip {
+  z-index: 99999;
+}
+
+/* Modal styles */
+.modal-backdrop-fix {
+  padding: 1rem !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+.modal-backdrop-fix .swal2-popup {
+  margin: 0 auto;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.modal-content-scrollable {
+  max-height: none !important;
+  background: white !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+/* Tooltip mejorado */
+.custom-tooltip {
+  --bs-tooltip-bg: #2c3e50;
+  --bs-tooltip-color: #fff;
+  --bs-tooltip-padding-x: 0.8rem;
+  --bs-tooltip-padding-y: 0.5rem;
+  opacity: 1 !important;
+}
+
+.custom-tooltip .tooltip-inner {
+  font-size: 0.875rem;
+  font-weight: normal;
+  padding: 0.5rem 0.75rem;
+  max-width: 250px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.custom-tooltip .tooltip-inner i {
+  opacity: 0.9;
+  margin-right: 0.5rem;
+}
+
+/* Asegurar que los tooltips estén siempre visibles */
+.tooltip {
+  z-index: 99999;
+  pointer-events: none;
+}
+
+[data-bs-toggle="tooltip"] {
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* Ajuste para el contenedor de diferencia */
+.difference-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Modal styles */
+.modal-content-scrollable {
+  max-height: 90vh;
+}
+
+.modal-backdrop-fix .swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Tabs styles */
+.nav-tabs .nav-link {
+  color: #6c757d;
+  border: none;
+  padding: 0.75rem 1rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #00549F;
+  border-bottom: 2px solid #00549F;
+  background: none;
+}
+
+/* Table styles */
+.table thead.sticky-top {
+  top: 0;
+  z-index: 1020;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* Card styles */
+.card {
+  border: none;
+  background-color: #f8f9fa;
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
