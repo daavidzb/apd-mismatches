@@ -1,129 +1,177 @@
-# Resumen de la Aplicación de Gestión de Descuadres
+# Athos Mismatches - Sistema de Gestión de Descuadres de Medicamentos
 
-## Estructura General
-
-La aplicación está estructurada en capas:
-
-### 1. Frontend
-
-- **Vistas** (src/views/)
-  - `dashboard.ejs`: Panel principal con estadísticas
-  - `analysis.ejs`: Análisis detallado de descuadres
-  - `managed.ejs`: Gestión de medicamentos
-  - `reports.ejs`: Reportes y comparativas
-  - `upload-view.ejs`: Carga de archivos Excel
-
-### 2. Backend
-
-#### Controladores
-Organizados por funcionalidad en api:
-
-1. **Dashboard** (dashboard.js)
-```javascript
-- get_trend_data         // Gráfico de tendencias (30 días)
-- get_state_distribution // Distribución por estados
-- get_month_report       // Resumen mensual
-```
-
-2. **Analysis** (analysis.js)
-```javascript
-- get_analysis_all           // Lista completa de descuadres
-- get_medicine_evolution     // Evolución histórica
-- get_compare_months        // Comparativa entre meses
-- get_categories_report     // Estadísticas por categoría
-```
-
-3. **Management** (managed.js)
-```javascript
-- update_medicine_management // Actualizar estado/categoría
-- get_medicine_management   // Obtener detalles de gestión
-- update_managed_mismatch   // Actualizar gestión existente
-```
-
-4. **Data** (data.js)
-```javascript
-- get_medicines_list    // Lista de medicamentos
-- get_categorias       // Categorías disponibles
-- get_estados         // Estados posibles
-```
-
-## Flujo de Datos
-
-1. **Carga de Datos**
-   - Usuario sube archivo Excel
-   - Sistema procesa y almacena datos
-   - Se generan estadísticas iniciales
-
-2. **Análisis**
-   - Identificación de patrones
-   - Clasificación de descuadres
-   - Generación de reportes
-
-3. **Gestión**
-   - Asignación de estados
-   - Categorización
-   - Seguimiento de cambios
+## Descripción
+Sistema web para la gestión y análisis de descuadres de medicamentos entre FarmaTools y los armarios APD. Permite identificar, analizar y gestionar las diferencias de inventario, facilitando el seguimiento y la toma de decisiones.
 
 ## Características Principales
 
-### Dashboard
-- Gráficos de tendencias
-- Distribución por estados
-- Indicadores clave
-- Top medicamentos
+### 1. Análisis de Descuadres
+- **Identificación de Patrones**
+  - Temporal: Descuadres que aparecen una sola vez
+  - Regular: Descuadres constantes o regularizados
+  - Cambios: Descuadres con variaciones significativas
+- **Visualización**
+  - Gráficos de evolución temporal
+  - Estadísticas por medicamento
+  - Indicadores de tendencias
 
-### Análisis
-- Patrones de descuadres
+### 2. Gestión de Medicamentos
+- **Estados Configurables**
+  - Pendiente
+  - En proceso
+  - Regularizado
+  - Corregido
+- **Categorización**
+  - Integración Dosis
+  - Integración externa
+  - Movimientos pendientes
+  - Uso inadecuado
+  - Horario comparación
+  - Descuadre FarmaTools
+  - En análisis
+
+### 3. Reportes y Estadísticas
 - Comparativas mensuales
-- Evolución histórica
-- Filtros avanzados
+- Distribución por estados
+- Análisis por categorías
+- Histórico de cambios
 
-### Gestión
-- Estados configurables
-- Categorización
-- Observaciones
-- Historial de cambios
+## Estructura del Proyecto
+
+### Frontend
+```
+src/
+  ├── views/
+  │   ├── analysis.ejs    # Vista principal de análisis
+  │   ├── dashboard.ejs   # Panel de control
+  │   ├── managed.ejs     # Gestión de medicamentos
+  │   └── reports.ejs     # Informes y estadísticas
+  │
+  └── public/
+      ├── css/
+      │   └── index.css   # Estilos principales
+      └── js/
+          ├── analysis.js  # Lógica de análisis
+          ├── managed.js   # Gestión de medicamentos
+          └── utils.js     # Utilidades comunes
+```
+
+### Backend
+```
+src/
+  ├── controllers/
+  │   └── api/
+  │       ├── sync.js     # Sincronización de datos
+  │       └── analysis.js # Controlador de análisis
+  │
+  ├── db/
+  │   └── connection.js   # Configuración BD
+  │
+  └── routes/
+      └── apis/          # Rutas API
+```
 
 ## Base de Datos
 
-Principales tablas:
+### Tablas Principales
 ```sql
-- descuadres          // Registro de descuadres
-- reportes           // Informes diarios
-- medicamentos_gestionados // Gestiones realizadas
-- estados_descuadre  // Estados posibles
-- categorias_descuadre // Categorías
-- motivos_descuadre  // Motivos de descuadre
+descuadres
+- id_descuadre (PK)
+- codigo_med
+- descripcion
+- cantidad_farmatools
+- cantidad_armario_apd
+- descuadre
+
+medicamentos_gestionados
+- id_gestion (PK)
+- id_descuadre (FK)
+- id_estado
+- id_categoria
+- observaciones
+- fecha_gestion
+
+estados_descuadre
+- id_estado (PK)
+- nombre
+- color
+
+categorias_descuadre
+- id_categoria (PK)
+- nombre
+- descripcion
 ```
 
-## Seguridad
-- Autenticación mediante passport.js
-- Middleware de autorización
-- Sesiones seguras
-- Control de acceso por rutas
+## API Endpoints
 
-## APIs Principales
+### Análisis
 ```javascript
-// Análisis
-GET /api/analysis/:month          // Descuadres del mes
-GET /api/analysis/detail/:code    // Detalles específicos
-PUT /api/analysis/manage/:code    // Actualizar gestión
-
-// Dashboard
-
-GET /api/dashboard/trend         // Datos de tendencias
-GET /api/dashboard/states        // Distribución estados
-
-// Reportes
-
-GET /api/reports/categories/:month // Estadísticas categorías
-GET /api/reports/compare/:m1/:m2  // Comparativa meses
+GET  /api/analysis/:month          // Obtener descuadres del mes
+GET  /api/analysis/detail/:code    // Detalles de medicamento
+GET  /api/analysis/history/:code   // Histórico de descuadres
+PUT  /api/analysis/manage/:code    // Gestionar medicamento
 ```
 
-## Tecnologías Utilizadas
-- Node.js con Express
-- MySQL para base de datos
-- EJS para vistas
-- DataTables para tablas
-- ApexCharts para gráficos
-- Bootstrap para UI
+### Dashboard
+```javascript
+GET  /api/dashboard/trend          // Tendencias
+GET  /api/dashboard/states         // Estados
+GET  /api/dashboard/categories     // Categorías
+```
+
+## Configuración del Proyecto
+
+### Requisitos Previos
+- Node.js v14 o superior
+- MySQL 5.7 o superior
+- npm o yarn
+
+### Instalación
+```bash
+# Clonar repositorio
+git clone [url-repositorio]
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con credenciales
+
+# Iniciar servidor desarrollo
+npm run dev
+```
+
+### Scripts Disponibles
+```json
+"scripts": {
+  "start": "node server.js",
+  "dev": "nodemon server.js",
+  "test": "jest"
+}
+```
+
+## Contribución
+1. Crear rama feature/fix
+2. Commit con mensaje descriptivo
+3. Push y crear Pull Request
+4. Code review y merge
+
+## Notas Importantes
+- Mantener consistencia en el estilo de código
+- Documentar cambios significativos
+- Ejecutar pruebas antes de commit
+- Actualizar README si es necesario
+
+## Tech Stack
+- Backend: Node.js, Express
+- Frontend: EJS, Bootstrap 5
+- Base de datos: MySQL
+- Librerías: DataTables, ApexCharts
+- Autenticación: Passport.js
+
+## Próximas Mejoras
+- [ ] Implementar dark mode
+- [ ] Mejorar rendimiento de consultas
+- [ ] Añadir más filtros de análisis
+- [ ] Exportación de reportes PDF
