@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const months = getLastTwelveMonths();
   const analysisMonth = document.getElementById("analysisMonth");
 
-  // Poblar selector de meses primero
   const option = document.createElement("option");
   option.value = "all";
   option.textContent = "Todos los períodos";
@@ -17,10 +16,8 @@ document.addEventListener("DOMContentLoaded", function () {
     analysisMonth.appendChild(option);
   });
 
-  // Definir la función de inicialización
   initializeTable = async function (month, keepFilter = false) {
     try {
-      // Guardar el filtro activo actual si keepFilter es true
       let activeFilter = null;
       if (keepFilter && dataTable) {
         activeFilter = $(".filter-buttons .btn.active")
@@ -35,13 +32,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const responseData = await response.json();
 
-      // Destruir tabla existente si existe
       if (dataTable) {
         dataTable.destroy();
         $(".filter-buttons").empty();
       }
 
-      // Función para aplicar filtros
       const applyFilter = (filterFunction) => {
         if (dataTable) {
           dataTable.settings()[0].clearCache = true;
@@ -50,7 +45,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       };
 
-      // Inicializar nueva tabla
       dataTable = new DataTable("#analysisTable", {
         data: responseData.analysis || [],
         language: dataTableEsES,
@@ -83,11 +77,21 @@ document.addEventListener("DOMContentLoaded", function () {
             title: "Diferencia",
             width: "100px",
             className: "text-end",
-            render: function(data, type, row) {
+            render: function(data) {
               const value = data || 0;
               const colorClass = value < 0 ? "text-danger" : "text-success";
-              let tooltip = "";
+              return `<strong class="${colorClass}">${value}</strong>`;
+            }
+          },
+          {
+            data: "estado_gestion",
+            title: "Estado",
+            width: "130px",
+            className: "text-center",
+            render: function(data, type, row) {
+              let badgeClass = getBadgeClass(data);
               let icon = "";
+              let tooltip = "";
 
               switch(row.tipo_patron) {
                 case "regular":
@@ -98,35 +102,24 @@ document.addEventListener("DOMContentLoaded", function () {
                   tooltip = "Descuadre temporal - Puede resolverse solo";
                   icon = "bi bi-clock-history";
                   break;
-                default:
+                case "cambios":
                   tooltip = "Presenta cambios significativos - Requiere revisión";
                   icon = "bi bi-exclamation-triangle";
+                  break;
               }
 
               return `
                 <div class="d-inline-flex align-items-center">
-                  <span 
-                    class="${colorClass}" 
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="right"
-                    data-bs-custom-class="custom-tooltip"
-                    data-bs-html="true"
-                    title="<i class='${icon} me-2'></i>${tooltip}"
-                  >
-                    <strong>${value}</strong>
+                  <span class="badge ${badgeClass}" 
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="left"
+                        data-bs-custom-class="custom-tooltip"
+                        data-bs-html="true"
+                        title="<i class='${icon} me-2'></i>${tooltip}">
+                    ${data || 'Pendiente'}
                   </span>
                 </div>`;
             }
-          },
-          {
-            data: "estado_gestion",
-            title: "Estado",
-            width: "120px",
-            className: "text-center",
-            render: function (data) {
-              let badgeClass = getBadgeClass(data);
-              return `<span class="badge ${badgeClass}">${data}</span>`;
-            },
           },
           {
             data: null,
@@ -166,13 +159,11 @@ document.addEventListener("DOMContentLoaded", function () {
               <"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>
             `,
         drawCallback: function () {
-          // Destruir tooltips existentes
-          $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-          
-          // Reinicializar tooltips
+          $('[data-bs-toggle="tooltip"]').tooltip("dispose");
+
           $('[data-bs-toggle="tooltip"]').tooltip({
-            container: 'body',
-            html: true
+            container: "body",
+            html: true,
           });
         },
         initComplete: function () {
@@ -202,12 +193,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                     `);
 
-          // Event listeners para los filtros
           $(".filter-all").on("click", function () {
             applyFilter(() => true);
           });
 
-          // Filtro para cambios significativos
           $(".filter-changes").on("click", function () {
             applyFilter((settings, searchData, index) => {
               const row = dataTable.row(index).data();
@@ -244,14 +233,12 @@ document.addEventListener("DOMContentLoaded", function () {
             });
           });
 
-          // Agregar estados activos a los botones y tooltips
           const filterBtns = $(".filter-buttons button");
           filterBtns.on("click", function () {
             filterBtns.removeClass("active");
             $(this).addClass("active");
           });
 
-          // Inicializar tooltips para los botones
           filterBtns.each(function () {
             new bootstrap.Tooltip(this, {
               placement: "top",
@@ -259,7 +246,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
           });
 
-          // Agregar resumen de estadísticas
           if (dataTable) {
             const data = dataTable.rows().data();
             const stats = {
@@ -310,8 +296,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             $(statsHtml).insertBefore(dataTable.table().container());
           }
-
-          // Agregar los event listeners después de inicializar la tabla
           $("#analysisTable").on("click", ".ver-detalle", function () {
             const codigo = $(this).data("codigo");
             showMedicineDetails(codigo, month);
@@ -326,8 +310,6 @@ document.addEventListener("DOMContentLoaded", function () {
               if (!response.ok)
                 throw new Error("Error al obtener datos del medicamento");
               const data = await response.json();
-
-              // Mostrar modal de gestión
               gestionarMedicamento(codigo, descripcion, data);
             } catch (error) {
               showNotification(
@@ -336,15 +318,11 @@ document.addEventListener("DOMContentLoaded", function () {
               );
             }
           });
-
-          // Si hay un filtro activo que mantener, reactivarlo
           if (keepFilter && activeFilter) {
             $(`.${activeFilter}`).trigger("click");
           }
         },
       });
-
-      // Inicializar tooltips después de que la tabla esté lista
       $('[data-bs-toggle="tooltip"]').tooltip();
     } catch (error) {
       console.error("Error:", error);
@@ -352,10 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   };
 
-  // Inicializar tabla con el valor actual del selector
   initializeTable(analysisMonth.value);
-
-  // Evento de cambio de mes
   analysisMonth.addEventListener("change", function () {
     initializeTable(this.value);
   });
@@ -401,65 +376,32 @@ async function showMedicineDetails(codigo, month) {
             <div class="flex-grow-1">
               <h4 class="mb-1 text-dark">${detailData.medicina.descripcion}</h4>
               <div class="badge bg-light text-dark fs-6">
-                <i class="bi bi-upc-scan me-2"></i>${detailData.medicina.codigo_med}
+                <i class="bi bi-upc-scan me-2"></i>${
+                  detailData.medicina.codigo_med
+                }
               </div>
             </div>
           </div>
         </div>
 
         <div class="p-4">
-          <!-- Nav tabs -->
           <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item">
-              <a class="nav-link active" data-bs-toggle="tab" href="#history" role="tab">
-                <i class="bi bi-clock-history me-2"></i>Histórico
+              <a class="nav-link active" data-bs-toggle="tab" href="#stats" role="tab">
+                <i class="bi bi-graph-up me-2"></i>Estadísticas
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="tab" href="#stats" role="tab">
-                <i class="bi bi-graph-up me-2"></i>Estadísticas
+              <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">
+                <i class="bi bi-clock-history me-2"></i>Histórico
               </a>
             </li>
           </ul>
 
-          <!-- Tab panes -->
           <div class="tab-content">
-            <!-- Histórico Tab -->
-            <div class="tab-pane active" id="history" role="tabpanel">
-              <div class="table-responsive mb-4" style="max-height: 300px;">
-                <table class="table table-sm table-hover">
-                  <thead class="sticky-top bg-white">
-                    <tr>
-                      <th>Fecha</th>
-                      <th class="text-end">Diferencia</th>
-                      <th>Estado</th>
-                      <th>Observaciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${historyData.map(item => `
-                      <tr>
-                        <td>${new Date(item.fecha_reporte).toLocaleDateString()}</td>
-                        <td class="text-end ${item.descuadre > 0 ? 'text-success' : 'text-danger'}">
-                          <strong>${item.descuadre}</strong>
-                        </td>
-                        <td>
-                          <span class="badge ${getBadgeClass(item.estado)}">
-                            ${item.estado || 'Pendiente'}
-                          </span>
-                        </td>
-                        <td>${item.observaciones || '-'}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-              <div id="evolutionChart"></div>
-            </div>
-
             <!-- Estadísticas Tab -->
-            <div class="tab-pane" id="stats" role="tabpanel">
-              <div class="row g-3">
+            <div class="tab-pane fade show active" id="stats" role="tabpanel">
+              <div class="row g-3 mb-4">
                 <div class="col-md-3">
                   <div class="card h-100">
                     <div class="card-body text-center">
@@ -472,7 +414,12 @@ async function showMedicineDetails(codigo, month) {
                   <div class="card h-100">
                     <div class="card-body text-center">
                       <div class="text-muted small mb-2">Promedio</div>
-                      <h3 class="mb-0">${Math.round(historyData.reduce((acc, curr) => acc + curr.descuadre, 0) / historyData.length)}</h3>
+                      <h3 class="mb-0">${Math.round(
+                        historyData.reduce(
+                          (acc, curr) => acc + curr.descuadre,
+                          0
+                        ) / historyData.length
+                      )}</h3>
                     </div>
                   </div>
                 </div>
@@ -480,7 +427,9 @@ async function showMedicineDetails(codigo, month) {
                   <div class="card h-100">
                     <div class="card-body text-center">
                       <div class="text-muted small mb-2">Máx. diferencia</div>
-                      <h3 class="mb-0">${Math.max(...historyData.map(i => Math.abs(i.descuadre)))}</h3>
+                      <h3 class="mb-0">${Math.max(
+                        ...historyData.map((i) => Math.abs(i.descuadre))
+                      )}</h3>
                     </div>
                   </div>
                 </div>
@@ -488,67 +437,124 @@ async function showMedicineDetails(codigo, month) {
                   <div class="card h-100">
                     <div class="card-body text-center">
                       <div class="text-muted small mb-2">Últ. descuadre</div>
-                      <h3 class="mb-0 ${historyData[0]?.descuadre > 0 ? 'text-success' : 'text-danger'}">
+                      <h3 class="mb-0 ${
+                        historyData[0]?.descuadre > 0
+                          ? "text-success"
+                          : "text-danger"
+                      }">
                         ${historyData[0]?.descuadre || 0}
                       </h3>
                     </div>
                   </div>
                 </div>
               </div>
+              
+              <div id="evolutionChart"></div>
+            </div>
+
+            <!-- Histórico Tab -->
+            <div class="tab-pane fade" id="history" role="tabpanel">
+              <div class="table-responsive" style="max-height: 500px;">
+                <table class="table table-sm table-hover">
+                  <thead class="sticky-top bg-white">
+                    <tr>
+                      <th>Fecha</th>
+                      <th class="text-center">Diferencia</th>
+                      <th>Estado</th>
+                      <th>Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${historyData
+                      .map(
+                        (item) => `
+                      <tr>
+                        <td>${new Date(
+                          item.fecha_reporte
+                        ).toLocaleDateString()}</td>
+                        <td class="text-center">
+                          <span class="${
+                            item.descuadre > 0 ? "text-success" : "text-danger"
+                          }">
+                            <strong>${item.descuadre}</strong>
+                          </span>
+                          ${
+                            item.hasChange
+                              ? `
+                            <i class="bi bi-arrow-${
+                              item.change > 0 ? "up" : "down"
+                            } text-${
+                                  item.change > 0 ? "success" : "danger"
+                                } ms-1" 
+                               data-bs-toggle="tooltip" 
+                               title="Cambio: ${item.change}"></i>
+                          `
+                              : ""
+                          }
+                        </td>
+                        <td>
+                          <span class="badge ${getBadgeClass(item.estado)}">
+                            ${item.estado || "Pendiente"}
+                          </span>
+                        </td>
+                        <td class="text-wrap">${item.observaciones || "-"}</td>
+                      </tr>
+                    `
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>`,
-      width: '900px',
+      width: "900px",
       padding: 0,
       customClass: {
-        container: 'modal-backdrop-fix',
-        popup: 'modal-content-scrollable'
+        container: "modal-backdrop-fix",
+        popup: "modal-content-scrollable",
       },
       confirmButtonText: "Cerrar",
       confirmButtonColor: "#00549F",
-      didOpen: () => {
-        // Inicializar tooltips y tabs
-        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltips.forEach(t => new bootstrap.Tooltip(t));
-        
-        // Inicializar tabs de Bootstrap
-        const tabElements = document.querySelectorAll('a[data-bs-toggle="tab"]');
-        tabElements.forEach(tab => new bootstrap.Tab(tab));
-
-        // Renderizar gráfico
-        new ApexCharts(document.querySelector("#evolutionChart"), {
-          series: [{
-            name: "Diferencia",
-            data: historyData.map(item => ({
-              x: new Date(item.fecha_reporte).getTime(),
-              y: item.descuadre
-            }))
-          }],
-          chart: {
-            type: 'line',
-            height: 250,
-            toolbar: { show: true },
-            animations: { enabled: true }
-          },
-          stroke: {
-            curve: 'smooth',
-            width: 3
-          },
-          markers: { size: 4 },
-          xaxis: {
-            type: 'datetime',
-            labels: { format: 'dd/MM/yy' }
-          },
-          yaxis: {
-            title: { text: 'Diferencia' }
-          },
-          tooltip: {
-            x: { format: 'dd MMM yyyy' }
-          },
-          colors: ['#00549F']
-        }).render();
-      }
     });
+
+    // Inicializar tooltips y gráfico después de que el modal esté visible
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach((t) => new bootstrap.Tooltip(t));
+
+    new ApexCharts(document.querySelector("#evolutionChart"), {
+      series: [
+        {
+          name: "Diferencia",
+          data: historyData.map((item) => ({
+            x: new Date(item.fecha_reporte).getTime(),
+            y: item.descuadre,
+          })),
+        },
+      ],
+      chart: {
+        type: "line",
+        height: 300,
+        toolbar: { show: true },
+        animations: { enabled: true },
+      },
+      stroke: {
+        curve: "smooth",
+        width: 3,
+      },
+      markers: { size: 4 },
+      xaxis: {
+        type: "datetime",
+        labels: { format: "dd/MM/yy" },
+      },
+      yaxis: {
+        title: { text: "Diferencia" },
+      },
+      tooltip: {
+        x: { format: "dd MMM yyyy" },
+      },
+      colors: ["#00549F"],
+    }).render();
   } catch (error) {
     console.error("Error:", error);
     showNotification("error", "No se pudieron cargar los detalles");
