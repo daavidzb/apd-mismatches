@@ -67,39 +67,59 @@
     
     <div class="sidebar-menu">
         <ul class="nav flex-column">
+            <!-- Dashboard - Vista general -->
             <li class="nav-item">
                 <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/">
                     <i class="bi bi-grid-1x2"></i>
                     <span class="ms-3">Panel de Control</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
-                    <i class="bi bi-cloud-upload"></i>
-                    <span class="ms-3"> Importar Reportes</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
-                    <i class="bi bi-graph-up"></i>
-                    <span class="ms-3">Sincronizar Inventario</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
-                    <i class="bi bi-check2-square"></i>
-                    <span class="ms-3">Seguimiento y Control</span>
-                </a>
-            </li>
+
+            <!-- Grupo: Gestión de Descuadres -->
+            <li class="nav-header text-muted small px-3 mt-3 mb-2">GESTIÓN DE DESCUADRES</li>
+            
             <li class="nav-item">
                 <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>" href="/mismatches">
-                    <i class="bi bi-list-check"></i>
+                    <i class="bi bi-search"></i>
                     <span class="ms-3">Inventario Detallado</span>
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'matrix' ? 'active' : '' %>" href="/matrix">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span class="ms-3">Matriz de Evolución</span>
+                    <span class="badge bg-info rounded-pill ms-2">Nuevo</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'managed' ? 'active' : '' %>" href="/managed">
+                    <i class="bi bi-clipboard2-check"></i>
+                    <span class="ms-3">Seguimiento y Control</span>
+                </a>
+            </li>
+
+            <!-- Grupo: Herramientas -->
+            <li class="nav-header text-muted small px-3 mt-3 mb-2">HERRAMIENTAS</li>
+
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>" href="/analysis">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span class="ms-3">Sincronizar Stock</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <%= active === 'upload' ? 'active' : '' %>" href="/upload">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span class="ms-3">Importar Reportes</span>
+                </a>
+            </li>
+
             <li class="nav-item">
                 <a class="nav-link <%= active === 'reports' ? 'active' : '' %>" href="/reports">
-                    <i class="bi bi-file-earmark-text"></i>
+                    <i class="bi bi-file-earmark-bar-graph"></i>
                     <span class="ms-3">Informes y Métricas</span>
                 </a>
             </li>

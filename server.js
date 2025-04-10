@@ -16,7 +16,7 @@ app.set('views', path.join(__dirname, 'src/views'))
 app.use(body_parser.urlencoded({extended: true}))
 app.use(express.json())
 app.use(session({
-    secret: config.secret, // Usar el secreto del config
+    secret: config.secret,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -27,7 +27,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
-// Middleware para variables globales
 app.use((req, res, next) => {
     res.locals.user = req.user || null;
     next();

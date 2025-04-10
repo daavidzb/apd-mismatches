@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { isAuthenticated } = require('../../auth/middleware');
 const reports = require('../../controllers/api/reports.js')
 const views = require('../../controllers/views.js')
-// const upload = require('../../controllers/api/upload.js')
+const matrix = require('../../controllers/api/matrix.js')
 const sync = require('../../controllers/api/sync.js')
 const manage = require('../../controllers/api/manage.js')
 const dashboard = require('../../controllers/api/dashboard.js')
@@ -20,6 +20,7 @@ router.get('/reports', isAuthenticated, views.reports_view)
 router.get('/analysis', isAuthenticated, views.analysis_view);
 router.get('/managed', isAuthenticated, views.managed_view);
 router.get('/dashboard', isAuthenticated, views.dashboard_view);
+router.get('/matrix', isAuthenticated, views.matrix_view);
 
 // api subida archivos
 router.post('/api/upload', processUpload)
@@ -51,5 +52,7 @@ router.get('/api/dashboard/trend', dashboard.get_trend_data);
 router.get('/api/dashboard/states', dashboard.get_state_distribution);
 
 router.get('/api/mismatches/history/:code', mismatches.get_mismatches_history);
+
+router.get('/api/mismatches/matrix', matrix.get_mismatches_matrix);
 
 module.exports.router = router

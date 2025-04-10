@@ -77,23 +77,23 @@ document.addEventListener("DOMContentLoaded", function () {
             title: "Diferencia",
             width: "100px",
             className: "text-end",
-            render: function(data) {
+            render: function (data) {
               const value = data || 0;
               const colorClass = value < 0 ? "text-danger" : "text-success";
               return `<strong class="${colorClass}">${value}</strong>`;
-            }
+            },
           },
           {
             data: "estado_gestion",
             title: "Estado",
             width: "130px",
             className: "text-center",
-            render: function(data, type, row) {
+            render: function (data, type, row) {
               let badgeClass = getBadgeClass(data);
               let icon = "";
               let tooltip = "";
 
-              switch(row.tipo_patron) {
+              switch (row.tipo_patron) {
                 case "regular":
                   tooltip = "Mantiene un patrón constante";
                   icon = "bi bi-arrow-repeat";
@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", function () {
                   icon = "bi bi-clock-history";
                   break;
                 case "cambios":
-                  tooltip = "Presenta cambios significativos - Requiere revisión";
+                  tooltip =
+                    "Presenta cambios significativos - Requiere revisión";
                   icon = "bi bi-exclamation-triangle";
                   break;
               }
@@ -116,10 +117,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         data-bs-custom-class="custom-tooltip"
                         data-bs-html="true"
                         title="<i class='${icon} me-2'></i>${tooltip}">
-                    ${data || 'Pendiente'}
+                    ${data || "Pendiente"}
                   </span>
                 </div>`;
-            }
+            },
           },
           {
             data: null,

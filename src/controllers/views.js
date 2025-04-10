@@ -136,6 +136,19 @@ const upload_view = async (req, res) => {
     });
   }
 };
+const matrix_view = async (req, res) => {
+  try {
+    res.render("matrix", {
+      title: "Matriz",
+      active: 'matrix',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
 const mismatches_view = async (req, res) => {
   try {
     const query = `
@@ -205,4 +218,5 @@ module.exports = {
   upload_view,
   mismatches_view,
   reports_view,
+  matrix_view,
 };

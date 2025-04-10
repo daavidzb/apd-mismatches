@@ -11,22 +11,6 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
---
--- Base de datos: `hunj`
---
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `categorias_descuadre`
---
-
 CREATE TABLE `categorias_descuadre` (
   `id_categoria` int(11) NOT NULL,
   `nombre` varchar(100) NOT NULL,
@@ -34,9 +18,6 @@ CREATE TABLE `categorias_descuadre` (
   `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Volcado de datos para la tabla `categorias_descuadre`
---
 
 INSERT INTO `categorias_descuadre` (`id_categoria`, `nombre`, `descripcion`, `fecha_creacion`) VALUES
 (1, 'Integración Dosis', 'Problemas relacionados con la integración de Dosis', '2025-03-24 11:08:26'),
@@ -46,12 +27,6 @@ INSERT INTO `categorias_descuadre` (`id_categoria`, `nombre`, `descripcion`, `fe
 (5, 'Horario de comparación de stocks', 'Descuadres temporales', '2025-03-24 11:08:26'),
 (6, 'Descuadre FarmaTools', 'Regularizar en FarmaTools', '2025-03-25 11:50:36'),
 (8, 'En análisis', 'Explorando las posibles causas del descuadre', '2025-03-25 12:40:21');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `descuadres`
---
 
 CREATE TABLE `descuadres` (
   `id_descuadre` int(11) NOT NULL,
@@ -63,10 +38,6 @@ CREATE TABLE `descuadres` (
   `cantidad_armario_apd` int(11) NOT NULL,
   `descuadre` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `descuadres`
---
 
 INSERT INTO `descuadres` (`id_descuadre`, `id_reporte`, `num_almacen`, `codigo_med`, `descripcion`, `cantidad_farmatools`, `cantidad_armario_apd`, `descuadre`) VALUES
 (1, 1, 2, '12166', 'CIDOFOVIR 75MG/ML VIAL 5ML RECONST SFH', 20, 10, 10),
