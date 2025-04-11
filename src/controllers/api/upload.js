@@ -267,6 +267,42 @@ const processUpload = (req, res) => {
   });
 };
 
+function updateFileList() {
+  const filesList = document.getElementById('filesList');
+  const emptyState = document.getElementById('emptyState');
+  const filesContainer = document.querySelector('.selected-files-container');
+  const fileCount = document.getElementById('fileCount');
+  const uploadButton = document.getElementById('uploadButton');
+
+  if (files.size === 0) {
+    filesList.classList.add('d-none');
+    emptyState.classList.remove('d-none');
+    uploadButton.disabled = true;
+    return;
+  }
+
+  filesList.classList.remove('d-none');
+  emptyState.classList.add('d-none');
+  uploadButton.disabled = false;
+  
+  fileCount.textContent = files.size;
+  filesContainer.innerHTML = Array.from(files)
+    .map(file => `
+      <div class="file-item" data-filename="${file.name}">
+        <div class="file-icon">
+          <i class="bi bi-file-earmark-excel text-success"></i>
+        </div>
+        <div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-size">${formatFileSize(file.size)}</div>
+        </div>
+        <button class="btn btn-link remove-file p-2" data-filename="${file.name}">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    `).join('');
+}
+
 module.exports = {
   processUpload,
 };

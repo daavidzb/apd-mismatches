@@ -116,7 +116,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Hacer clic en la zona activa el input
-  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("click", (e) => {
+    if (e.target === dropZone || e.target.closest('.drop-icon')) {
+      fileInput.click();
+    }
+  });
 
   // Funciones auxiliares
   const formatFileSize = (bytes) => {
@@ -128,46 +132,39 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const updateFileList = () => {
-    selectedFilesContainer.innerHTML = files.size === 0 
-        ? `<div class="text-center text-muted p-4">
-             <i class="bi bi-cloud-arrow-up fs-1"></i>
-             <p class="mt-2">Arrastra archivos aquí o haz clic para seleccionar</p>
-           </div>`
-        : `<div class="text-center text-success p-4">
-             <i class="bi bi-check-circle fs-1"></i>
-             <p class="mt-2">${files.size} archivo${files.size !== 1 ? 's' : ''} seleccionado${files.size !== 1 ? 's' : ''}</p>
-           </div>`;
-
-    filesList.innerHTML = files.size === 0 
-        ? `<div class="text-center text-muted p-4">No hay archivos seleccionados</div>`
-        : Array.from(files)
-            .map(file => `
-                <div class="card file-item-new">
-                    <div class="card-body py-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center flex-grow-1 me-3">
-                                <div class="file-icon rounded-circle bg-light p-2 me-3">
-                                    <i class="bi bi-file-earmark-excel text-success"></i>
-                                </div>
-                                <div class="file-info" style="min-width: 0;">
-                                    <div class="text-truncate" title="${file.name}">
-                                        ${file.name}
-                                    </div>
-                                    <small class="text-muted">${formatFileSize(file.size)}</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-link text-danger remove-file p-2" 
-                                    data-filename="${file.name}"
-                                    title="Eliminar archivo">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `)
-            .join('');
-
-    uploadButton.disabled = files.size === 0;
+    const filesList = document.getElementById('filesList');
+    const emptyState = document.getElementById('emptyState');
+    const filesContainer = document.querySelector('.selected-files-container');
+    const fileCount = document.getElementById('fileCount');
+    const uploadButton = document.getElementById('uploadButton');
+  
+    if (files.size === 0) {
+      filesList.classList.add('d-none');
+      emptyState.classList.remove('d-none');
+      uploadButton.disabled = true;
+      return;
+    }
+  
+    filesList.classList.remove('d-none');
+    emptyState.classList.add('d-none');
+    uploadButton.disabled = false;
+    
+    fileCount.textContent = files.size;
+    filesContainer.innerHTML = Array.from(files)
+      .map(file => `
+        <div class="file-item" data-filename="${file.name}">
+          <div class="file-icon">
+            <i class="bi bi-file-earmark-excel text-success"></i>
+          </div>
+          <div class="file-info">
+            <div class="file-name">${file.name}</div>
+            <div class="file-size">${formatFileSize(file.size)}</div>
+          </div>
+          <button class="btn btn-link remove-file p-2" data-filename="${file.name}">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      `).join('');
   };
 
   const handleFiles = (fileList) => {
@@ -466,5 +463,266 @@ function showFileDetails(filename, fileData) {
     if (mainModal) {
       mainModal.style.display = "flex";
     }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  // Elementos del DOM
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  const uploadForm = document.getElementById("uploadForm");
+  const filesList = document.getElementById("filesList");
+  const emptyState = document.getElementById("emptyState");
+  const uploadButton = document.getElementById("uploadButton");
+  const filesContainer = document.querySelector(".selected-files-container");
+  const fileCount = document.getElementById("fileCount");
+  
+  let files = new Set();
+
+  // Funciones auxiliares
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const updateFileList = () => {
+    if (files.size === 0) {
+      filesList.classList.add('d-none');
+      emptyState.classList.remove('d-none');
+      uploadButton.disabled = true;
+      return;
+    }
+
+    filesList.classList.remove('d-none');
+    emptyState.classList.add('d-none');
+    uploadButton.disabled = false;
+    
+    fileCount.textContent = files.size;
+    filesContainer.innerHTML = Array.from(files)
+      .map(file => `
+        <div class="file-item" data-filename="${file.name}">
+          <div class="file-icon">
+            <i class="bi bi-file-earmark-excel text-success"></i>
+          </div>
+          <div class="file-info">
+            <div class="file-name">${file.name}</div>
+            <div class="file-size">${formatFileSize(file.size)}</div>
+          </div>
+          <button class="btn btn-link remove-file p-2" data-filename="${file.name}">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      `).join('');
+  };
+
+  const handleFiles = (fileList) => {
+    const validFiles = Array.from(fileList).filter(file => {
+      const validMimeTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ];
+      const ext = file.name.toLowerCase().split('.').pop();
+      const isValidExt = ['xlsx', 'xls'].includes(ext);
+      
+      if (!validMimeTypes.includes(file.type) && !isValidExt) {
+        Swal.fire({
+          icon: "error",
+          title: "Archivo no válido",
+          text: `${file.name} no es un archivo Excel válido (.xlsx, .xls)`,
+          confirmButtonColor: "#00549F"
+        });
+        return false;
+      }
+      return true;
+    });
+
+    validFiles.forEach(file => files.add(file));
+    updateFileList();
+  };
+
+  // Event listeners
+  dropZone.addEventListener("click", (e) => {
+    if (e.target === dropZone || e.target.closest('.drop-icon')) {
+      fileInput.click();
+    }
+  });
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    handleFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    handleFiles(e.target.files);
+  });
+
+  filesList.addEventListener("click", (e) => {
+    const removeButton = e.target.closest(".remove-file");
+    if (removeButton) {
+      const fileName = removeButton.dataset.filename;
+      files = new Set([...files].filter(file => file.name !== fileName));
+      updateFileList();
+    }
+  });
+
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    if (files.size === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin archivos",
+        text: "Por favor, selecciona al menos un archivo para subir",
+        confirmButtonColor: "#00549F"
+      });
+      return;
+    }
+
+    try {
+      uploadButton.disabled = true;
+      uploadButton.innerHTML = `
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Procesando...
+      `;
+
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar los archivos');
+      }
+
+      const result = await response.json();
+      const successful = result.results.filter(r => r.status === 'success');
+      const duplicates = result.results.filter(r => r.status === 'duplicate');
+      const errors = result.results.filter(r => r.status === 'error');
+
+      await showResults(successful, duplicates, errors);
+
+      if (successful.length > 0) {
+        files = new Set([...files].filter(file => 
+          !successful.some(s => s.fileName === file.name)
+        ));
+        updateFileList();
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Error al procesar los archivos',
+        confirmButtonColor: '#00549F'
+      });
+    } finally {
+      uploadButton.disabled = false;
+      uploadButton.innerHTML = '<i class="bi bi-upload me-2"></i>Procesar archivos';
+    }
+  });
+});
+
+function showResults(successful, duplicates, errors) {
+  let totalMedicamentos = 0;
+  successful.forEach(file => {
+    totalMedicamentos += file.medicamentosValidos || 0;
+  });
+
+  return Swal.fire({
+    title: 'Resultado del procesamiento',
+    html: `
+      <div class="text-start p-3">
+        <div class="alert alert-success mb-4">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+            <div>
+              <h6 class="mb-1">Resumen del proceso</h6>
+              <div>Total medicamentos procesados: ${totalMedicamentos}</div>
+            </div>
+          </div>
+        </div>
+
+        ${successful.length > 0 ? `
+          <div class="mb-4">
+            <h6 class="text-success d-flex align-items-center">
+              <i class="bi bi-check-circle me-2"></i>
+              Archivos procesados (${successful.length})
+            </h6>
+            <div class="list-group">
+              ${successful.map(file => `
+                <div class="list-group-item bg-light border-0 py-2">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <i class="bi bi-file-earmark-excel text-success me-2"></i>
+                      <small>${file.fileName}</small>
+                    </div>
+                    <span class="badge bg-success rounded-pill">
+                      ${file.medicamentosValidos || 0} medicamentos
+                    </span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${duplicates.length > 0 ? `
+          <div class="mb-4">
+            <h6 class="text-warning d-flex align-items-center">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Archivos duplicados (${duplicates.length})
+            </h6>
+            <div class="list-group">
+              ${duplicates.map(file => `
+                <div class="list-group-item bg-light border-0 py-2">
+                  <small>${file.fileName} - ${file.detalles || ''}</small>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${errors.length > 0 ? `
+          <div>
+            <h6 class="text-danger d-flex align-items-center">
+              <i class="bi bi-x-circle me-2"></i>
+              Archivos con errores (${errors.length})
+            </h6>
+            <div class="list-group">
+              ${errors.map(file => `
+                <div class="list-group-item bg-light border-0 py-2">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <small>${file.fileName}</small>
+                    <small class="text-danger">${file.razon || 'Error desconocido'}</small>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `,
+    icon: 'success', // Siempre success ya que el proceso se completó
+    confirmButtonColor: '#00549F',
+    width: '600px',
+    padding: '2rem'
   });
 }

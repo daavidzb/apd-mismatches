@@ -25,200 +25,205 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'reports'}) %>
-    <div class="container my-4">
-      <!-- <div class="row mb-4">
-        <div class="col">
-          <h2><i class="bi bi-graph-up"></i> Reportes</h2>
-        </div>
-      </div> -->
-      <ul class="nav nav-tabs" id="reportTabs" role="tablist">
-        <li class="nav-item">
-          <a
-            class="nav-link active"
-            id="summary-tab"
-            data-bs-toggle="tab"
-            href="#summary"
-            role="tab"
-          >
-            <i class="bi bi-clipboard-data"></i> Resumen Mensual
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            id="top-meds-tab"
-            data-bs-toggle="tab"
-            href="#top-meds"
-            role="tab"
-          >
-            <i class="bi bi-list-ol"></i> Top Medicamentos
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            id="evolution-tab"
-            data-bs-toggle="tab"
-            href="#evolution"
-            role="tab"
-          >
-            <i class="bi bi-activity"></i> Evolución
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            id="compare-tab"
-            data-bs-toggle="tab"
-            href="#compare"
-            role="tab"
-          >
-            <i class="bi bi-bar-chart"></i> Comparativa
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            id="categories-tab"
-            data-bs-toggle="tab"
-            href="#categories"
-            role="tab"
-          >
-            <i class="bi bi-pie-chart"></i> Categorías y Motivos
-          </a>
-        </li>
-      </ul>
-
-      <div class="tab-content mt-3" id="reportTabsContent">
-        <div class="tab-pane fade show active" id="summary" role="tabpanel">
-          <div class="card shadow-sm h-100" style="min-height: 600px">
-            <div class="card-body p-4">
-              <div class="row mb-3">
-                <div class="col-md-4">
-                  <select class="form-select" id="summaryMonth"></select>
-                </div>
-              </div>
-              <div id="summaryChart"></div>
-            </div>
+    <div class="content-wrapper">
+      <div class="container my-4">
+        <!-- <div class="row mb-4">
+          <div class="col">
+            <h2><i class="bi bi-graph-up"></i> Reportes</h2>
           </div>
-        </div>
+        </div> -->
+        <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+          <li class="nav-item">
+            <a
+              class="nav-link active"
+              id="summary-tab"
+              data-bs-toggle="tab"
+              href="#summary"
+              role="tab"
+            >
+              <i class="bi bi-clipboard-data"></i> Resumen Mensual
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              id="top-meds-tab"
+              data-bs-toggle="tab"
+              href="#top-meds"
+              role="tab"
+            >
+              <i class="bi bi-list-ol"></i> Top Medicamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              id="evolution-tab"
+              data-bs-toggle="tab"
+              href="#evolution"
+              role="tab"
+            >
+              <i class="bi bi-activity"></i> Evolución
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              id="compare-tab"
+              data-bs-toggle="tab"
+              href="#compare"
+              role="tab"
+            >
+              <i class="bi bi-bar-chart"></i> Comparativa
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              id="categories-tab"
+              data-bs-toggle="tab"
+              href="#categories"
+              role="tab"
+            >
+              <i class="bi bi-pie-chart"></i> Categorías y Motivos
+            </a>
+          </li>
+        </ul>
 
-        <div class="tab-pane fade" id="top-meds" role="tabpanel">
-          <div class="card shadow-sm h-100" style="min-height: 600px">
-            <div class="card-body p-4">
-              <div class="row mb-3">
-                <div class="col-md-4">
-                  <select class="form-select" id="topMedsMonth"></select>
+        <div class="tab-content mt-3" id="reportTabsContent">
+          <div class="tab-pane fade show active" id="summary" role="tabpanel">
+            <div class="card shadow-sm h-100" style="min-height: 600px">
+              <div class="card-body p-4">
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <select class="form-select" id="summaryMonth"></select>
+                  </div>
                 </div>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-striped" id="topMedsTable">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Descripción</th>
-                      <th>Días con Descuadre</th>
-                      <th>% Días del Mes</th>
-                      <th>Mínimo</th>
-                      <th>Máximo</th>
-                      <th>Promedio</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
+                <div id="summaryChart"></div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="tab-pane fade" id="evolution" role="tabpanel">
-          <div class="card shadow-sm h-100" style="min-height: 600px">
-            <div class="card-body p-4">
-              <div class="row mb-3">
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <div class="position-relative">
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="medicineSearch"
-                        placeholder="Buscar por código o nombre..."
-                        autocomplete="off"
-                      />
-                      <div
-                        id="searchResults"
-                        class="position-absolute w-100 d-none"
-                        style="
-                          z-index: 1000;
-                          max-height: 200px;
-                          overflow-y: auto;
-                          background: white;
-                          border: 1px solid #ddd;
-                          border-radius: 4px;
-                        "
-                      ></div>
+          <div class="tab-pane fade" id="top-meds" role="tabpanel">
+            <div class="card shadow-sm h-100" style="min-height: 600px">
+              <div class="card-body p-4">
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <select class="form-select" id="topMedsMonth"></select>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-striped" id="topMedsTable">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Días con Descuadre</th>
+                        <th>% Días del Mes</th>
+                        <th>Mínimo</th>
+                        <th>Máximo</th>
+                        <th>Promedio</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="evolution" role="tabpanel">
+            <div class="card shadow-sm h-100" style="min-height: 600px">
+              <div class="card-body p-4">
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <div class="position-relative">
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="medicineSearch"
+                          placeholder="Buscar por código o nombre..."
+                          autocomplete="off"
+                        />
+                        <div
+                          id="searchResults"
+                          class="position-absolute w-100 d-none"
+                          style="
+                            z-index: 1000;
+                            max-height: 200px;
+                            overflow-y: auto;
+                            background: white;
+                            border: 1px solid #ddd;
+                            border-radius: 4px;
+                          "
+                        ></div>
+                      </div>
+                      <input type="hidden" id="selectedMedicineCode" />
                     </div>
-                    <input type="hidden" id="selectedMedicineCode" />
+                  </div>
+                </div>
+                <div id="evolutionChart">
+                  <div class="empty-state">
+                    <i class="bi bi-search"></i>
+                    <h4>Busca un medicamento para ver su evolución</h4>
+                    <p>
+                      Escribe el código o nombre del medicamento en el buscador
+                      superior para visualizar el histórico de sus descuadres.
+                    </p>
                   </div>
                 </div>
               </div>
-              <div id="evolutionChart">
-                <div class="empty-state">
-                  <i class="bi bi-search"></i>
-                  <h4>Busca un medicamento para ver su evolución</h4>
-                  <p>
-                    Escribe el código o nombre del medicamento en el buscador
-                    superior para visualizar el histórico de sus descuadres.
-                  </p>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="compare" role="tabpanel">
+            <div class="card shadow-sm h-100" style="min-height: 600px">
+              <div class="card-body p-4">
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <select
+                      class="form-select mb-2"
+                      id="compareMonth1"
+                    ></select>
+                    <select class="form-select" id="compareMonth2"></select>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12 mb-4">
+                    <div id="compareSummaryChart"></div>
+                  </div>
+                  <div class="col-12">
+                    <div id="compareDetailChart"></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="tab-pane fade" id="compare" role="tabpanel">
-          <div class="card shadow-sm h-100" style="min-height: 600px">
-            <div class="card-body p-4">
-              <div class="row mb-3">
-                <div class="col-md-4">
-                  <select class="form-select mb-2" id="compareMonth1"></select>
-                  <select class="form-select" id="compareMonth2"></select>
+          <div class="tab-pane fade" id="categories" role="tabpanel">
+            <div class="card mt-3">
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-md-3">
+                    <select
+                      class="form-select month-selector"
+                      id="categoriesMonth"
+                    ></select>
+                  </div>
                 </div>
-              </div>
-              <div class="row">
-                <div class="col-12 mb-4">
-                  <div id="compareSummaryChart"></div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div id="categoriesChart"></div>
+                  </div>
+                  <div class="col-md-6">
+                    <div id="motivesChart"></div>
+                  </div>
                 </div>
-                <div class="col-12">
-                  <div id="compareDetailChart"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="tab-pane fade" id="categories" role="tabpanel">
-          <div class="card mt-3">
-            <div class="card-body">
-              <div class="row mb-3">
-                <div class="col-md-3">
-                  <select
-                    class="form-select month-selector"
-                    id="categoriesMonth"
-                  ></select>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <div id="categoriesChart"></div>
-                </div>
-                <div class="col-md-6">
-                  <div id="motivesChart"></div>
-                </div>
-              </div>
-              <div class="row mt-4">
-                <div class="col">
-                  <div id="dailyAverageChart"></div>
+                <div class="row mt-4">
+                  <div class="col">
+                    <div id="dailyAverageChart"></div>
+                  </div>
                 </div>
               </div>
             </div>

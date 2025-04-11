@@ -22,53 +22,47 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'upload'}) %>
-    <div class="container-fluid my-4">
-      <div class="row">
-        <!-- Panel de carga -->
-        <div class="col-lg-8 mb-4">
-          <div class="card shadow-sm h-100">
-            <div class="card-header bg-white py-3">
-              <h5 class="card-title mb-0">
-                <i class="bi bi-cloud-upload me-2"></i>
-                Subir archivos
-              </h5>
-            </div>
-            <div class="card-body">
-              <form id="uploadForm" enctype="multipart/form-data">
-                <div id="dropZone" class="drop-zone">
-                  <input type="file" id="fileInput" multiple accept=".xlsx" class="d-none">
-                  <div id="selectedFiles" class="selected-files">
-                    <div class="text-center text-muted p-4">
-                      <i class="bi bi-cloud-arrow-up fs-1"></i>
-                      <p class="mt-2">Arrastra archivos aquí o haz clic para seleccionar</p>
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
-            <div class="card-footer bg-white">
-              <div class="d-flex justify-content-end">
-                <button type="submit" id="uploadButton" form="uploadForm" class="btn btn-primary" disabled>
-                  <i class="bi bi-upload me-2"></i>Subir archivos
-                </button>
-              </div>
-            </div>
+    <div class="content-wrapper">
+      <div class="container-fluid my-4">
+        <div class="card shadow-sm">
+          <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-cloud-upload me-2"></i>
+              Importar Reportes
+            </h5>
           </div>
-        </div>
+          <div class="card-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+              <div id="dropZone" class="drop-zone">
+                <input type="file" id="fileInput" multiple accept=".xlsx,.xls" class="d-none"/>
+                
+                <!-- Estado inicial -->
+                <div id="emptyState" class="text-center p-5">
+                  <div class="drop-icon mb-3">
+                    <i class="bi bi-cloud-arrow-up display-4 text-primary"></i>
+                  </div>
+                  <h5>Arrastra archivos Excel aquí</h5>
+                  <p class="text-muted mb-4">o</p>
+                  <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                    <i class="bi bi-folder-plus me-2"></i>Seleccionar archivos
+                  </button>
+                </div>
 
-        <!-- Panel de archivos seleccionados -->
-        <div class="col-lg-4">
-          <div class="card shadow-sm h-100">
-            <div class="card-header bg-white py-3">
-              <h5 class="card-title mb-0">
-                <i class="bi bi-list-check me-2"></i>
-                Archivos seleccionados
-              </h5>
-            </div>
-            <div class="card-body p-0">
-              <div id="filesList" class="file-list" style="max-height: calc(100vh - 250px); overflow-y: auto;">
+                <!-- Lista de archivos -->
+                <div id="filesList" class="files-list d-none">
+                  <div class="selected-files-header d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                      <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                      Archivos seleccionados (<span id="fileCount">0</span>)
+                    </h6>
+                    <button type="submit" id="uploadButton" class="btn btn-primary btn-sm" disabled>
+                      <i class="bi bi-upload me-2"></i>Procesar archivos
+                    </button>
+                  </div>
+                  <div class="selected-files-container"></div>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>

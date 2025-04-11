@@ -25,30 +25,33 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'mismatches'}) %>
-    <div class="container-fluid my-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-white py-3">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-list-check text-primary me-2"></i>
-            Inventario Detallado
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table id="descuadresTable" class="table table-sm table-hover">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Código</th>
-                  <th>Descripción</th>
-                  <th class="text-end">Diferencia</th>
-                  <th class="text-center">Estado</th>
-                  <th class="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% mismatches.forEach(function(item) { %>
-                  <tr class="<%= item.descuadre < 0 ? 'table-danger' : item.descuadre > 0 ? 'table-warning' : '' %>">
+    <div class="content-wrapper">
+      <div class="container-fluid my-4">
+        <div class="card shadow-sm">
+          <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-list-check text-primary me-2"></i>
+              Inventario Detallado
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table id="descuadresTable" class="table table-sm table-hover">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="text-end">Diferencia</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% mismatches.forEach(function(item) { %>
+                  <tr
+                    class="<%= item.descuadre < 0 ? 'table-danger' : item.descuadre > 0 ? 'table-warning' : '' %>"
+                  >
                     <td data-order="<%= item.fecha_reporte %>">
                       <%= new Date(item.fecha_reporte).toLocaleDateString() %>
                       <small class="text-muted d-block">
@@ -56,43 +59,53 @@
                       </small>
                     </td>
                     <td><%= item.codigo_med %></td>
-                    <td style="max-width: 300px;">
-                      <div class="text-truncate" title="<%= item.descripcion %>">
+                    <td style="max-width: 300px">
+                      <div
+                        class="text-truncate"
+                        title="<%= item.descripcion %>"
+                      >
                         <%= item.descripcion %>
                       </div>
                     </td>
                     <td class="text-end">
-                      <strong class="<%= item.descuadre < 0 ? 'text-danger' : 'text-success' %>">
+                      <strong
+                        class="<%= item.descuadre < 0 ? 'text-danger' : 'text-success' %>"
+                      >
                         <%= item.descuadre %>
                       </strong>
                     </td>
                     <td class="text-center">
                       <% if (item.estado) { %>
-                        <span class="badge" 
-                              style="background-color: <%= item.color %>;" 
-                              data-bs-toggle="tooltip" 
-                              data-bs-placement="top" 
-                              title="<%= item.observaciones || 'Sin observaciones' %>">
-                          <%= item.estado %>
-                        </span>
+                      <span
+                        class="badge"
+                        style="background-color: <%= item.color %>"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        title="<%= item.observaciones || 'Sin observaciones' %>"
+                      >
+                        <%= item.estado %>
+                      </span>
                       <% } else { %>
-                        <span class="badge bg-secondary">Pendiente</span>
+                      <span class="badge bg-secondary">Pendiente</span>
                       <% } %>
                     </td>
                     <td class="text-center">
-                      <button class="btn btn-sm btn-info view-history" 
-                              data-code="<%= item.codigo_med %>"
-                              data-description="<%= item.descripcion %>"
-                              data-bs-toggle="tooltip"
-                              data-bs-placement="left"
-                              title="Ver historial completo">
+                      <button
+                        class="btn btn-sm btn-info view-history"
+                        data-code="<%= item.codigo_med %>"
+                        data-description="<%= item.descripcion %>"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="left"
+                        title="Ver historial completo"
+                      >
                         <i class="bi bi-clock-history"></i>
                       </button>
                     </td>
                   </tr>
-                <% }); %>
-              </tbody>
-            </table>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

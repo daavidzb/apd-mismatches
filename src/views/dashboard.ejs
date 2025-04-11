@@ -58,137 +58,139 @@
         color: #00b8d4 !important;
       }
     </style>
-    <div class="container-fluid py-4">
-      <div class="row mb-4">
-        <div class="col">
-          <h2>
-            <i class="bi bi-person-circle"></i>
-            Bienvenido, <%= user.nombre %>
-          </h2>
+    <div class="content-wrapper">
+      <div class="container-fluid py-4">
+        <div class="row mb-4">
+          <div class="col">
+            <h2>
+              <i class="bi bi-person-circle"></i>
+              Bienvenido, <%= user.nombre %>
+            </h2>
+          </div>
         </div>
-      </div>
-      <div class="row g-4 mb-4">
-        <div class="col-md-6 col-lg-3">
-          <div class="card shadow-sm border-0">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h6 class="text-muted mb-2">Pendientes</h6>
-                  <h3 class="mb-0"><%= stats.pendientes %></h3>
+        <div class="row g-4 mb-4">
+          <div class="col-md-6 col-lg-3">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h6 class="text-muted mb-2">Pendientes</h6>
+                    <h3 class="mb-0"><%= stats.pendientes %></h3>
+                  </div>
+                  <div class="icon-shape bg-danger text-white rounded-3">
+                    <i class="bi bi-exclamation-circle"></i>
+                  </div>
                 </div>
-                <div class="icon-shape bg-danger text-white rounded-3">
-                  <i class="bi bi-exclamation-circle"></i>
-                </div>
+                <p class="mt-2 mb-0 text-sm">
+                  <span class="text-danger">
+                    <%= stats.porcentajePendientes %>%
+                  </span>
+                  <span class="text-muted ms-2">del total</span>
+                </p>
               </div>
-              <p class="mt-2 mb-0 text-sm">
-                <span class="text-danger">
-                  <%= stats.porcentajePendientes %>%
-                </span>
-                <span class="text-muted ms-2">del total</span>
-              </p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h6 class="text-muted mb-2">Resueltos</h6>
+                    <h3 class="mb-0"><%= stats.resueltos %></h3>
+                  </div>
+                  <div class="icon-shape bg-success text-white rounded-3">
+                    <i class="bi bi-check-circle"></i>
+                  </div>
+                </div>
+                <p class="mt-2 mb-0 text-sm">
+                  <span class="text-success">
+                    <%= stats.porcentajeResueltos %>%
+                  </span>
+                  <span class="text-muted ms-2">del total</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h6 class="text-muted mb-2">En Proceso</h6>
+                    <h3 class="mb-0"><%= stats.enProceso %></h3>
+                  </div>
+                  <div class="icon-shape bg-warning text-white rounded-3">
+                    <i class="bi bi-gear"></i>
+                  </div>
+                </div>
+                <p class="mt-2 mb-0 text-sm">
+                  <span class="text-warning">
+                    <%= stats.porcentajeEnProceso %>%
+                  </span>
+                  <span class="text-muted ms-2">del total</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h6 class="text-muted mb-2">A Regularizar</h6>
+                    <h3 class="mb-0"><%= stats.regularizar %></h3>
+                  </div>
+                  <div class="icon-shape bg-purple text-white rounded-3">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </div>
+                </div>
+                <p class="mt-2 mb-0 text-sm">
+                  <span class="text-purple">
+                    <%= stats.porcentajeRegularizar %>%
+                  </span>
+                  <span class="text-muted ms-2">del total</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        <div class="col-md-6 col-lg-3">
-          <div class="card shadow-sm border-0">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h6 class="text-muted mb-2">Resueltos</h6>
-                  <h3 class="mb-0"><%= stats.resueltos %></h3>
-                </div>
-                <div class="icon-shape bg-success text-white rounded-3">
-                  <i class="bi bi-check-circle"></i>
-                </div>
-              </div>
-              <p class="mt-2 mb-0 text-sm">
-                <span class="text-success">
-                  <%= stats.porcentajeResueltos %>%
-                </span>
-                <span class="text-muted ms-2">del total</span>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-          <div class="card shadow-sm border-0">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h6 class="text-muted mb-2">En Proceso</h6>
-                  <h3 class="mb-0"><%= stats.enProceso %></h3>
-                </div>
-                <div class="icon-shape bg-warning text-white rounded-3">
-                  <i class="bi bi-gear"></i>
-                </div>
-              </div>
-              <p class="mt-2 mb-0 text-sm">
-                <span class="text-warning">
-                  <%= stats.porcentajeEnProceso %>%
-                </span>
-                <span class="text-muted ms-2">del total</span>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-          <div class="card shadow-sm border-0">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h6 class="text-muted mb-2">A Regularizar</h6>
-                  <h3 class="mb-0"><%= stats.regularizar %></h3>
-                </div>
-                <div class="icon-shape bg-purple text-white rounded-3">
-                  <i class="bi bi-arrow-repeat"></i>
-                </div>
-              </div>
-              <p class="mt-2 mb-0 text-sm">
-                <span class="text-purple">
-                  <%= stats.porcentajeRegularizar %>%
-                </span>
-                <span class="text-muted ms-2">del total</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Row para crear una nueva columna para tarjetas en caso de necesitar mostrar más información -->
-      <!-- <div class="row">
-        <div class="col-md-6 col-lg-3">
-          <div class="card shadow-sm border-0">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h6 class="text-muted mb-2">Total Descuadres</h6>
-                  <h3 class="mb-0"><%= stats.total %></h3>
+        <!-- Row para crear una nueva columna para tarjetas en caso de necesitar mostrar más información -->
+        <!-- <div class="row">
+          <div class="col-md-6 col-lg-3">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h6 class="text-muted mb-2">Total Descuadres</h6>
+                    <h3 class="mb-0"><%= stats.total %></h3>
+                  </div>
+                  <div class="icon-shape bg-info text-white rounded-3">
+                    <i class="bi bi-list-ul"></i>
+                  </div>
                 </div>
-                <div class="icon-shape bg-info text-white rounded-3">
-                  <i class="bi bi-list-ul"></i>
-                </div>
+                <p class="mt-2 mb-0 text-sm">
+                  <span class="text-muted">Último mes</span>
+                </p>
               </div>
-              <p class="mt-2 mb-0 text-sm">
-                <span class="text-muted">Último mes</span>
-              </p>
             </div>
           </div>
-        </div>
-      </div> -->
-      <div class="row g-4">
-        <div class="col-lg-8">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title mb-4">Tendencia de Descuadres</h5>
-              <div id="trendChart" style="height: 400px"></div>
+        </div> -->
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title mb-4">Tendencia de Descuadres</h5>
+                <div id="trendChart" style="height: 400px"></div>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="col-lg-4">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title mb-4">Distribución de Estados</h5>
-              <div id="stateChart" style="height: 400px"></div>
+          <div class="col-lg-4">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title mb-4">Distribución de Estados</h5>
+                <div id="stateChart" style="height: 400px"></div>
+              </div>
             </div>
           </div>
         </div>

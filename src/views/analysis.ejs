@@ -25,34 +25,34 @@
   </head>
   <body>
     <%- include('partials/navbar', {active: 'analysis'}) %>
-
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="row align-items-center mb-3">
-          <div class="col-md-3">
-            <select class="form-select" id="analysisMonth">
-            </select>
+    <div class="content-wrapper">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="row align-items-center mb-3">
+            <div class="col-md-3">
+              <select class="form-select" id="analysisMonth">
+              </select>
+            </div>
           </div>
-        </div>
-        <div class="table-responsive">
-          <table id="analysisTable" class="table table-sm table-hover">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Código</th>
-                <th>Descripción</th>
-                <th>Diferencia</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table id="analysisTable" class="table table-sm table-hover">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Diferencia</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
-
     <%- include('partials/footer') %>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
