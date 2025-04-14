@@ -355,19 +355,119 @@ function getLastTwelveMonths() {
   return months;
 }
 
-// Modificar la función showMedicineDetails para medicamentos con cambios significativos
+// Función para mostrar detalles del medicamento
 async function showMedicineDetails(codigo, month) {
   try {
+    // Mostrar loader mientras se cargan los datos
+    Swal.fire({
+      title: "Cargando...",
+      html: `
+        <div class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+    });
+
     const [detailResponse, historyResponse] = await Promise.all([
       fetch(`/api/analysis/detail/${month}/${codigo}`),
       fetch(`/api/analysis/history/${codigo}/${month}`),
     ]);
 
+    if (!detailResponse.ok || !historyResponse.ok) {
+      throw new Error("Error al obtener los datos");
+    }
+
     const detailData = await detailResponse.json();
     const historyData = await historyResponse.json();
 
-    Swal.fire({
+    // Preparar datos para el gráfico
+    const chartData = historyData.map(item => ({
+      x: new Date(item.fecha_reporte).getTime(),
+      y: item.descuadre
+    }));
+
+    // Calcular estadísticas adicionales
+    const stats = {
+      totalRegistros: historyData.length,
+      cambiosGestion: historyData.filter((item, i, arr) => 
+        i > 0 && item.estado !== arr[i-1].estado && item.estado !== null
+      ).length,
+      esRegularizable: historyData.length > 1 && 
+        historyData.every((item, i, arr) => 
+          i === 0 || item.descuadre === arr[i-1].descuadre
+        ),
+      esTemporal: historyData.length === 1,
+      ultimoDescuadre: historyData[0]?.descuadre || 0,
+      maxDescuadre: Math.max(...historyData.map(item => Math.abs(item.descuadre))),
+      minDescuadre: Math.min(...historyData.map(item => Math.abs(item.descuadre))),
+      promDescuadre: (historyData.reduce((sum, item) => sum + item.descuadre, 0) / historyData.length).toFixed(2),
+      totalGestiones: historyData.filter(item => item.estado !== null).length,
+      cambiosEstado: historyData.filter((item, i, arr) => 
+        i > 0 && item.estado !== arr[i-1].estado
+      ).length,
+      diasConDescuadre: historyData.length
+    };
+
+    // HTML de las tarjetas optimizado
+    const statsCards = `
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title mb-3">Estado Actual</h6>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted">Apariciones:</span>
+            <strong>${stats.totalRegistros} ${stats.totalRegistros === 1 ? "vez" : "veces"}</strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">Cambios de estado:</span>
+            <strong>${stats.cambiosGestion}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title mb-3">Análisis de Tendencia</h6>
+          ${stats.esTemporal ? `
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              <small>Este medicamento solo ha aparecido una vez, podría ser temporal</small>
+            </div>
+          ` : stats.esRegularizable ? `
+            <div class="alert alert-warning mb-0">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              <small>Mantiene un patrón constante, considerar regularizar</small>
+            </div>
+          ` : detailData.analisis.tiene_cambios_significativos ? `
+            <div class="alert alert-danger mb-0">
+              <i class="bi bi-graph-up-arrow me-2"></i>
+              <small>Presenta cambios significativos que requieren atención</small>
+            </div>
+          ` : `
+            <div class="alert alert-success mb-0">
+              <i class="bi bi-check-circle me-2"></i>
+              <small>No presenta cambios significativos</small>
+            </div>
+          `}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+    await Swal.fire({
       title: false,
+      width: "900px",
+      customClass: {
+        container: "modal-backdrop-fix",
+        popup: "modal-content-scrollable",
+      },
       html: `
         <div class="modal-header border-bottom">
           <div class="d-flex align-items-center w-100">
@@ -385,180 +485,184 @@ async function showMedicineDetails(codigo, month) {
           </div>
         </div>
 
-        <div class="p-4">
-          <ul class="nav nav-tabs mb-3" role="tablist">
-            <li class="nav-item">
-              <a class="nav-link active" data-bs-toggle="tab" href="#stats" role="tab">
-                <i class="bi bi-graph-up me-2"></i>Estadísticas
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">
-                <i class="bi bi-clock-history me-2"></i>Histórico
-              </a>
-            </li>
-          </ul>
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#stats" role="tab">
+              <i class="bi bi-graph-up me-2"></i>Estadísticas
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">
+              <i class="bi bi-clock-history me-2"></i>Histórico
+            </a>
+          </li>
+        </ul>
 
-          <div class="tab-content">
-            <!-- Estadísticas Tab -->
-            <div class="tab-pane fade show active" id="stats" role="tabpanel">
-              <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                  <div class="card h-100">
-                    <div class="card-body text-center">
-                      <div class="text-muted small mb-2">Total registros</div>
-                      <h3 class="mb-0">${historyData.length}</h3>
+        <div class="tab-content p-3">
+          <div class="tab-pane fade show active" id="stats" role="tabpanel">
+            <div id="evolutionChart" class="mb-6"></div>
+            <div class="row g-3">
+              <!-- Stats Cards -->
+              <div class="col-md-6">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title mb-3">Resumen de Gestión</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="text-muted">Cambios de estado:</span>
+                      <strong>${stats.cambiosEstado}</strong>
                     </div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card h-100">
-                    <div class="card-body text-center">
-                      <div class="text-muted small mb-2">Promedio</div>
-                      <h3 class="mb-0">${Math.round(
-                        historyData.reduce(
-                          (acc, curr) => acc + curr.descuadre,
-                          0
-                        ) / historyData.length
-                      )}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card h-100">
-                    <div class="card-body text-center">
-                      <div class="text-muted small mb-2">Máx. diferencia</div>
-                      <h3 class="mb-0">${Math.max(
-                        ...historyData.map((i) => Math.abs(i.descuadre))
-                      )}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card h-100">
-                    <div class="card-body text-center">
-                      <div class="text-muted small mb-2">Últ. descuadre</div>
-                      <h3 class="mb-0 ${
-                        historyData[0]?.descuadre > 0
-                          ? "text-success"
-                          : "text-danger"
-                      }">
-                        ${historyData[0]?.descuadre || 0}
-                      </h3>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="text-muted">Días con descuadre:</span>
+                      <strong>${stats.diasConDescuadre}</strong>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <div id="evolutionChart"></div>
-            </div>
-
-            <!-- Histórico Tab -->
-            <div class="tab-pane fade" id="history" role="tabpanel">
-              <div class="table-responsive" style="max-height: 500px;">
-                <table class="table table-sm table-hover">
-                  <thead class="sticky-top bg-white">
-                    <tr>
-                      <th>Fecha</th>
-                      <th class="text-center">Diferencia</th>
-                      <th>Estado</th>
-                      <th>Observaciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${historyData
-                      .map(
-                        (item) => `
-                      <tr>
-                        <td>${new Date(
-                          item.fecha_reporte
-                        ).toLocaleDateString()}</td>
-                        <td class="text-center">
-                          <span class="${
-                            item.descuadre > 0 ? "text-success" : "text-danger"
-                          }">
-                            <strong>${item.descuadre}</strong>
-                          </span>
-                          ${
-                            item.hasChange
-                              ? `
-                            <i class="bi bi-arrow-${
-                              item.change > 0 ? "up" : "down"
-                            } text-${
-                                  item.change > 0 ? "success" : "danger"
-                                } ms-1" 
-                               data-bs-toggle="tooltip" 
-                               title="Cambio: ${item.change}"></i>
-                          `
-                              : ""
-                          }
-                        </td>
-                        <td>
-                          <span class="badge ${getBadgeClass(item.estado)}">
-                            ${item.estado || "Pendiente"}
-                          </span>
-                        </td>
-                        <td class="text-wrap">${item.observaciones || "-"}</td>
-                      </tr>
-                    `
-                      )
-                      .join("")}
-                  </tbody>
-                </table>
+              <div class="col-md-6">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title mb-3">Análisis de Tendencia</h6>
+                    <p class="mb-2">
+                      ${
+                        detailData.analisis.tiene_cambios_significativos
+                          ? '<span class="text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Presenta cambios significativos</span>'
+                          : '<span class="text-success"><i class="bi bi-check-circle me-2"></i>Patrón estable</span>'
+                      }
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>`,
-      width: "900px",
-      padding: 0,
-      customClass: {
-        container: "modal-backdrop-fix",
-        popup: "modal-content-scrollable",
-      },
+
+          <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead class="sticky-top bg-white">
+                  <tr>
+                    <th>Fecha</th>
+                    <th class="text-end">Diferencia</th>
+                    <th>Estado</th>
+                    <th>Cambio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${historyData
+                    .map((item, index) => {
+                      const prevItem =
+                        index > 0 ? historyData[index - 1] : null;
+                      const cambio = prevItem
+                        ? item.descuadre - prevItem.descuadre
+                        : 0;
+                      const hayCambio = prevItem && Math.abs(cambio) > 0;
+
+                      return `
+                      <tr ${hayCambio ? 'class="table-warning"' : ""}>
+                        <td>${new Date(
+                          item.fecha_reporte
+                        ).toLocaleDateString()}</td>
+                        <td class="text-end ${
+                          item.descuadre > 0 ? "text-success" : "text-danger"
+                        }">
+                          <strong>${item.descuadre}</strong>
+                        </td>
+                        <td>
+                          ${
+                            item.estado
+                              ? `<span class="badge ${getBadgeClass(
+                                  item.estado
+                                )}">${item.estado}</span>`
+                              : '<span class="badge bg-secondary">Pendiente</span>'
+                          }
+                        </td>
+                        <td>
+                          ${
+                            hayCambio
+                              ? `
+                              <small class="${
+                                cambio > 0 ? "text-success" : "text-danger"
+                              }">
+                                <i class="bi bi-arrow-${
+                                  cambio > 0 ? "up" : "down"
+                                }"></i>
+                                ${Math.abs(cambio)}
+                              </small>
+                            `
+                              : ""
+                          }
+                        </td>
+                      </tr>
+                    `;
+                    })
+                    .join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `,
+      showConfirmButton: true,
       confirmButtonText: "Cerrar",
       confirmButtonColor: "#00549F",
+      didOpen: () => {
+        // Inicializar gráfico
+        const options = {
+          series: [
+            {
+              name: "Descuadre",
+              data: chartData,
+            },
+          ],
+          chart: {
+            type: "line",
+            height: 350,
+            toolbar: {
+              show: true,
+            },
+            zoom: {
+              enabled: true,
+            },
+          },
+          xaxis: {
+            type: "datetime",
+            labels: {
+              datetimeFormatter: {
+                year: 'yyyy',
+                month: 'MMM \'yy',
+                day: 'dd MMM',
+                hour: 'HH:mm'
+              }
+            }
+          },
+          yaxis: {
+            title: {
+              text: "Diferencia",
+            },
+          },
+          tooltip: {
+            x: {
+              format: "dd/MM/yy",
+            },
+          },
+          markers: {
+            size: 5,
+          },
+        };
+
+        new ApexCharts(
+          document.querySelector("#evolutionChart"),
+          options
+        ).render();
+      },
     });
-
-    // Inicializar tooltips y gráfico después de que el modal esté visible
-    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltips.forEach((t) => new bootstrap.Tooltip(t));
-
-    new ApexCharts(document.querySelector("#evolutionChart"), {
-      series: [
-        {
-          name: "Diferencia",
-          data: historyData.map((item) => ({
-            x: new Date(item.fecha_reporte).getTime(),
-            y: item.descuadre,
-          })),
-        },
-      ],
-      chart: {
-        type: "line",
-        height: 300,
-        toolbar: { show: true },
-        animations: { enabled: true },
-      },
-      stroke: {
-        curve: "smooth",
-        width: 3,
-      },
-      markers: { size: 4 },
-      xaxis: {
-        type: "datetime",
-        labels: { format: "dd/MM/yy" },
-      },
-      yaxis: {
-        title: { text: "Diferencia" },
-      },
-      tooltip: {
-        x: { format: "dd MMM yyyy" },
-      },
-      colors: ["#00549F"],
-    }).render();
   } catch (error) {
     console.error("Error:", error);
-    showNotification("error", "No se pudieron cargar los detalles");
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudieron cargar los detalles",
+      confirmButtonColor: "#00549F",
+    });
   }
 }
 
@@ -780,7 +884,6 @@ function actualizarMotivos(categoriaId, motivoSeleccionado = null) {
   }
 }
 
-// Modificar la función actualizarGestionMedicamento
 async function actualizarGestionMedicamento(codigo, datos) {
   try {
     const response = await fetch(`/api/analysis/update/${codigo}`, {
@@ -879,7 +982,6 @@ const dataTableEsES = {
   },
 };
 
-// Agregar esta función auxiliar para actualizar el panel de estadísticas
 function updateStatsPanel(stats) {
   const statsHtml = `
       <div class="row mb-4 mt-2">
@@ -914,7 +1016,6 @@ function updateStatsPanel(stats) {
       </div>
   `;
 
-  // Actualizar el panel de estadísticas
   const oldStats = $(".card.border-0.bg-light").closest(".row");
   oldStats.replaceWith(statsHtml);
 }

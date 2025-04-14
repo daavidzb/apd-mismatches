@@ -2,7 +2,11 @@
 <div class="sidebar">
   <div class="sidebar-header">
     <a class="navbar-brand" href="/dashboard">
-      <img src="/public/img/logo_claim.png" alt="APD Logo" class="sidebar-logo"/>
+      <img
+        src="/public/img/logo_claim.png"
+        alt="APD Logo"
+        class="sidebar-logo"
+      />
     </a>
   </div>
 
@@ -10,36 +14,44 @@
     <ul class="nav flex-column">
       <!-- Dashboard - Vista general -->
       <li class="nav-item">
-        <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>"
-           href="/"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Panel de Control">
+        <a
+          class="nav-link <%= active === 'dashboard' ? 'active' : '' %>"
+          href="/"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Panel de Control"
+        >
           <i class="bi bi-grid-1x2"></i>
           <span class="ms-3">Panel de Control</span>
         </a>
       </li>
 
       <!-- Grupo: Gestión de Descuadres -->
-      <li class="nav-header text-muted small px-3 mt-3 mb-2">GESTIÓN DE DESCUADRES</li>
+      <li class="nav-header text-muted small px-3 mt-3 mb-2">
+        GESTIÓN DE DESCUADRES
+      </li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'mismatches' ? 'active' : '' %>"
-           href="/mismatches"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Inventario Detallado">
+        <a
+          class="nav-link <%= active === 'mismatches' ? 'active' : '' %>"
+          href="/mismatches"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Inventario Detallado"
+        >
           <i class="bi bi-search"></i>
           <span class="ms-3">Inventario Detallado</span>
         </a>
       </li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'matrix' ? 'active' : '' %>"
-           href="/matrix"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Matriz de Evolución">
+        <a
+          class="nav-link <%= active === 'matrix' ? 'active' : '' %>"
+          href="/matrix"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Matriz de Evolución"
+        >
           <i class="bi bi-grid-3x3-gap"></i>
           <span class="ms-3">Matriz de Evolución</span>
           <span class="badge bg-info rounded-pill ms-auto">Nuevo</span>
@@ -47,11 +59,13 @@
       </li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'managed' ? 'active' : '' %>"
-           href="/managed"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Seguimiento y Control">
+        <a
+          class="nav-link <%= active === 'managed' ? 'active' : '' %>"
+          href="/managed"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Seguimiento y Control"
+        >
           <i class="bi bi-clipboard2-check"></i>
           <span class="ms-3">Seguimiento y Control</span>
         </a>
@@ -61,33 +75,39 @@
       <li class="nav-header text-muted small px-3 mt-3 mb-2">HERRAMIENTAS</li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'analysis' ? 'active' : '' %>"
-           href="/analysis"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Sincronizar Stock">
+        <a
+          class="nav-link <%= active === 'analysis' ? 'active' : '' %>"
+          href="/analysis"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Sincronizar Stock"
+        >
           <i class="bi bi-arrow-left-right"></i>
           <span class="ms-3">Sincronizar Stock</span>
         </a>
       </li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'upload' ? 'active' : '' %>"
-           href="/upload"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Importar Reportes">
+        <a
+          class="nav-link <%= active === 'upload' ? 'active' : '' %>"
+          href="/upload"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Importar Reportes"
+        >
           <i class="bi bi-cloud-upload"></i>
           <span class="ms-3">Importar Reportes</span>
         </a>
       </li>
 
       <li class="nav-item">
-        <a class="nav-link <%= active === 'reports' ? 'active' : '' %>"
-           href="/reports"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Informes y Métricas">
+        <a
+          class="nav-link <%= active === 'reports' ? 'active' : '' %>"
+          href="/reports"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Informes y Métricas"
+        >
           <i class="bi bi-file-earmark-bar-graph"></i>
           <span class="ms-3">Informes y Métricas</span>
         </a>
@@ -97,9 +117,11 @@
 
   <div class="sidebar-footer">
     <div class="dropup w-100">
-      <button class="btn btn-link user-dropdown"
-              type="button"
-              data-bs-toggle="dropdown">
+      <button
+        class="btn btn-link user-dropdown"
+        type="button"
+        data-bs-toggle="dropdown"
+      >
         <div class="d-flex align-items-center">
           <div class="user-avatar me-2">
             <i class="bi bi-person"></i>
@@ -131,15 +153,17 @@
     <div class="navbar-title">
       <h1><%= title %></h1>
       <% if (active === 'dashboard') { %>
-        <small class="text-light-50">Panel de Control</small>
+      <small class="text-light-50">Panel de Control</small>
       <% } %>
     </div>
     <div class="ms-auto d-flex align-items-center">
       <div class="dropdown">
-        <button class="btn btn-link nav-user-button"
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false">
+        <button
+          class="btn btn-link nav-user-button"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
           <div class="d-flex align-items-center">
             <div class="user-avatar">
               <i class="bi bi-person"></i>
@@ -157,7 +181,7 @@
               <div><%= user.rol || 'Usuario' %></div>
             </div>
           </li>
-          <li><hr class="dropdown-divider"></li>
+          <li><hr class="dropdown-divider" /></li>
           <li>
             <a class="dropdown-item text-danger" href="/auth/logout">
               <i class="bi bi-box-arrow-right"></i>
