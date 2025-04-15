@@ -205,7 +205,7 @@ document.addEventListener("DOMContentLoaded", function () {
               return (
                 row &&
                 (row.tipo_patron === "cambios" || // Tiene cambios significativos
-                  row.tiene_cambios_tendencia) // O presenta cambios en su tendencia
+                  row.tiene_cambios_tendencia) // o presenta cambios en su tendencia
               );
             });
           });
@@ -215,7 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
               return (
                 row &&
                 (row.tipo_patron === "regular" || // Tiene patrón regular
-                  row.estado_gestion === "Regularizar") // O está en estado Regularizar
+                  row.estado_gestion === "Regularizar") // está en estado Regularizar
               );
             });
           });
@@ -355,10 +355,8 @@ function getLastTwelveMonths() {
   return months;
 }
 
-// Función para mostrar detalles del medicamento
 async function showMedicineDetails(codigo, month) {
   try {
-    // Mostrar loader mientras se cargan los datos
     Swal.fire({
       title: "Cargando...",
       html: `
@@ -384,35 +382,41 @@ async function showMedicineDetails(codigo, month) {
     const detailData = await detailResponse.json();
     const historyData = await historyResponse.json();
 
-    // Preparar datos para el gráfico
-    const chartData = historyData.map(item => ({
+    const chartData = historyData.map((item) => ({
       x: new Date(item.fecha_reporte).getTime(),
-      y: item.descuadre
+      y: item.descuadre,
     }));
 
-    // Calcular estadísticas adicionales
     const stats = {
       totalRegistros: historyData.length,
-      cambiosGestion: historyData.filter((item, i, arr) => 
-        i > 0 && item.estado !== arr[i-1].estado && item.estado !== null
+      cambiosGestion: historyData.filter(
+        (item, i, arr) =>
+          i > 0 && item.estado !== arr[i - 1].estado && item.estado !== null
       ).length,
-      esRegularizable: historyData.length > 1 && 
-        historyData.every((item, i, arr) => 
-          i === 0 || item.descuadre === arr[i-1].descuadre
+      esRegularizable:
+        historyData.length > 1 &&
+        historyData.every(
+          (item, i, arr) => i === 0 || item.descuadre === arr[i - 1].descuadre
         ),
       esTemporal: historyData.length === 1,
       ultimoDescuadre: historyData[0]?.descuadre || 0,
-      maxDescuadre: Math.max(...historyData.map(item => Math.abs(item.descuadre))),
-      minDescuadre: Math.min(...historyData.map(item => Math.abs(item.descuadre))),
-      promDescuadre: (historyData.reduce((sum, item) => sum + item.descuadre, 0) / historyData.length).toFixed(2),
-      totalGestiones: historyData.filter(item => item.estado !== null).length,
-      cambiosEstado: historyData.filter((item, i, arr) => 
-        i > 0 && item.estado !== arr[i-1].estado
+      maxDescuadre: Math.max(
+        ...historyData.map((item) => Math.abs(item.descuadre))
+      ),
+      minDescuadre: Math.min(
+        ...historyData.map((item) => Math.abs(item.descuadre))
+      ),
+      promDescuadre: (
+        historyData.reduce((sum, item) => sum + item.descuadre, 0) /
+        historyData.length
+      ).toFixed(2),
+      totalGestiones: historyData.filter((item) => item.estado !== null).length,
+      cambiosEstado: historyData.filter(
+        (item, i, arr) => i > 0 && item.estado !== arr[i - 1].estado
       ).length,
-      diasConDescuadre: historyData.length
+      diasConDescuadre: historyData.length,
     };
 
-    // HTML de las tarjetas optimizado
     const statsCards = `
   <div class="row g-3">
     <div class="col-md-6">
@@ -421,7 +425,9 @@ async function showMedicineDetails(codigo, month) {
           <h6 class="card-title mb-3">Estado Actual</h6>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted">Apariciones:</span>
-            <strong>${stats.totalRegistros} ${stats.totalRegistros === 1 ? "vez" : "veces"}</strong>
+            <strong>${stats.totalRegistros} ${
+      stats.totalRegistros === 1 ? "vez" : "veces"
+    }</strong>
           </div>
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted">Cambios de estado:</span>
@@ -435,27 +441,35 @@ async function showMedicineDetails(codigo, month) {
       <div class="card h-100">
         <div class="card-body">
           <h6 class="card-title mb-3">Análisis de Tendencia</h6>
-          ${stats.esTemporal ? `
+          ${
+            stats.esTemporal
+              ? `
             <div class="alert alert-info mb-0">
               <i class="bi bi-info-circle me-2"></i>
               <small>Este medicamento solo ha aparecido una vez, podría ser temporal</small>
             </div>
-          ` : stats.esRegularizable ? `
+          `
+              : stats.esRegularizable
+              ? `
             <div class="alert alert-warning mb-0">
               <i class="bi bi-exclamation-triangle me-2"></i>
               <small>Mantiene un patrón constante, considerar regularizar</small>
             </div>
-          ` : detailData.analisis.tiene_cambios_significativos ? `
+          `
+              : detailData.analisis.tiene_cambios_significativos
+              ? `
             <div class="alert alert-danger mb-0">
               <i class="bi bi-graph-up-arrow me-2"></i>
               <small>Presenta cambios significativos que requieren atención</small>
             </div>
-          ` : `
+          `
+              : `
             <div class="alert alert-success mb-0">
               <i class="bi bi-check-circle me-2"></i>
               <small>No presenta cambios significativos</small>
             </div>
-          `}
+          `
+          }
         </div>
       </div>
     </div>
@@ -627,12 +641,12 @@ async function showMedicineDetails(codigo, month) {
             type: "datetime",
             labels: {
               datetimeFormatter: {
-                year: 'yyyy',
-                month: 'MMM \'yy',
-                day: 'dd MMM',
-                hour: 'HH:mm'
-              }
-            }
+                year: "yyyy",
+                month: "MMM 'yy",
+                day: "dd MMM",
+                hour: "HH:mm",
+              },
+            },
           },
           yaxis: {
             title: {
@@ -770,7 +784,7 @@ async function gestionarMedicamento(codigo, descripcion, data) {
       },
     });
 
-    console.log("Resultado del modal:", result);
+    // console.log("Resultado del modal:", result);
 
     if (result.isConfirmed && result.value) {
       console.log("Datos a enviar:", result.value);
@@ -801,7 +815,6 @@ async function gestionarMedicamento(codigo, descripcion, data) {
         throw new Error(responseData.error || "Error al guardar la gestión");
       }
 
-      // Recargar tabla manteniendo filtro
       const currentMonth = document.getElementById("analysisMonth").value;
       const tableResponse = await fetch(`/api/analysis/${currentMonth}`);
       const tableData = await tableResponse.json();
@@ -831,9 +844,7 @@ async function gestionarMedicamento(codigo, descripcion, data) {
   }
 }
 
-// Asegurar que el event listener está correctamente configurado
 document.addEventListener("DOMContentLoaded", function () {
-  // Event listener para el botón gestionar
   $(document).on("click", ".gestionar", function () {
     const codigo = $(this).data("codigo");
     const descripcion = $(this).data("descripcion");
@@ -841,7 +852,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-// Función para actualizar los motivos según la categoría seleccionada
 function actualizarMotivos(categoriaId, motivoSeleccionado = null) {
   const motivosSelect = document.getElementById("motivo");
   motivosSelect.disabled = true;
@@ -917,7 +927,6 @@ async function actualizarGestionMedicamento(codigo, datos) {
       showConfirmButton: false,
     });
 
-    // Esperar un momento antes de recargar la tabla
     setTimeout(async () => {
       try {
         const currentMonth = document.getElementById("analysisMonth").value;
@@ -931,7 +940,6 @@ async function actualizarGestionMedicamento(codigo, datos) {
           dataTable.draw();
         }
 
-        // Reinicializar tooltips
         const tooltips = document.querySelectorAll(
           '[data-bs-toggle="tooltip"]'
         );
