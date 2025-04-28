@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       };
 
+      // Remover tooltips innecesarios
       dataTable = new DataTable("#analysisTable", {
         data: responseData.analysis || [],
         language: dataTableEsES,
@@ -67,9 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
             title: "Descripción",
             width: "300px",
             render: function (data) {
-              const shortDesc =
-                data.length > 35 ? data.substring(0, 35) + "..." : data;
-              return `<span class="text-truncate" title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
+              return `<span class="text-truncate">${data}</span>`;
             },
           },
           {
@@ -89,24 +88,49 @@ document.addEventListener("DOMContentLoaded", function () {
             width: "130px",
             className: "text-center",
             render: function (data, type, row) {
+              console.log("Estado actual:", data);
+              console.log("Datos completos de la fila:", row);
+              
               let badgeClass = getBadgeClass(data);
               let icon = "";
               let tooltip = "";
-
-              switch (row.tipo_patron) {
-                case "regular":
-                  tooltip = "Mantiene un patrón constante";
-                  icon = "bi bi-arrow-repeat";
-                  break;
-                case "temporal":
-                  tooltip = "Descuadre temporal - Puede resolverse solo";
-                  icon = "bi bi-clock-history";
-                  break;
-                case "cambios":
-                  tooltip =
-                    "Presenta cambios significativos - Requiere revisión";
-                  icon = "bi bi-exclamation-triangle";
-                  break;
+            
+              // Si hay un estado de gestión, úsalo
+              if (data && data !== 'Pendiente') {
+                console.log("Entrando en estado de gestión:", data.toLowerCase());
+                switch(data.toLowerCase()) {
+                  case 'regularizar':
+                    icon = "bi bi-arrow-repeat";
+                    tooltip = "Medicamento marcado para regularizar";
+                    badgeClass = "bg-info";
+                    break;
+                  case 'corregido':
+                    icon = "bi bi-check-circle";
+                    tooltip = "Medicamento corregido";
+                    badgeClass = "bg-success";
+                    break;
+                  case 'en proceso':
+                    icon = "bi bi-hourglass-split";
+                    tooltip = "En proceso de gestión";
+                    badgeClass = "bg-warning";
+                    break;
+                }
+              } else {
+                // Si no hay estado, mostrar el patrón
+                switch (row.tipo_patron) {
+                  case "regular":
+                    tooltip = "Mantiene un patrón constante - Considerar regularizar";
+                    icon = "bi bi-arrow-repeat";
+                    break;
+                  case "temporal":
+                    tooltip = "Descuadre temporal - Puede resolverse solo";
+                    icon = "bi bi-clock-history";
+                    break;
+                  case "cambios":
+                    tooltip = "Presenta cambios significativos - Requiere revisión";
+                    icon = "bi bi-exclamation-triangle";
+                    break;
+                }
               }
 
               return `
@@ -215,7 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
               return (
                 row &&
                 (row.tipo_patron === "regular" || // Tiene patrón regular
-                  row.estado_gestion === "Regularizar") // está en estado Regularizar
+                 row.estado_gestion === "Regularizar") // está en estado Regularizar
               );
             });
           });
@@ -684,13 +708,13 @@ function getBadgeClass(estado) {
   switch (estado?.toLowerCase()) {
     case "resuelto":
     case "corregido":
-      return "bg-success"; // Verde
+      return "bg-success";
     case "en proceso":
-      return "bg-warning"; // Amarillo
+      return "bg-warning";
     case "regularizar":
-      return "bg-info"; // Azul info
+      return "bg-info"; // Asegurarnos que este caso esté bien definido
     case "pendiente":
-      return "bg-secondary"; // Gris
+      return "bg-secondary";
     default:
       return "bg-secondary";
   }
@@ -896,6 +920,15 @@ function actualizarMotivos(categoriaId, motivoSeleccionado = null) {
 
 async function actualizarGestionMedicamento(codigo, datos) {
   try {
+    // Mostrar loader mientras se procesa
+    Swal.fire({
+      title: "Actualizando...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     const response = await fetch(`/api/analysis/update/${codigo}`, {
       method: "POST",
       headers: {
@@ -919,41 +952,60 @@ async function actualizarGestionMedicamento(codigo, datos) {
       throw new Error(result.error || "Error al actualizar");
     }
 
-    await Swal.fire({
-      icon: "success",
-      title: "Actualizado",
-      text: "Los cambios se han guardado correctamente",
-      timer: 1500,
+    // Forzar recarga de datos con el estado actualizado
+    const currentMonth = document.getElementById("analysisMonth").value;
+    const freshData = await fetch(`/api/analysis/${currentMonth}`);
+    const tableData = await freshData.json();
+
+    if (dataTable) {
+      // Destruir la tabla existente
+      dataTable.destroy();
+      $('#analysisTable tbody').empty();
+      
+      // Recrear la tabla con los datos actualizados
+      dataTable = $('#analysisTable').DataTable({
+        data: tableData.analysis,
+        columns: [/* tu configuración de columnas */],
+        language: dataTableEsES,
+        // ... resto de la configuración
+      });
+
+      // Reinicializar tooltips
+      $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+      $('[data-bs-toggle="tooltip"]').tooltip({
+        container: 'body',
+        html: true
+      });
+
+      // Reactivar el filtro actual
+      const activeFilter = $('.filter-buttons .btn.active').attr('class').match(/filter-\w+/)[0];
+      if (activeFilter) {
+        $(`.${activeFilter}`).trigger('click');
+      }
+    }
+
+    // Mostrar notificación de éxito
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "top-end",
       showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener("mouseenter", Swal.stopTimer);
+        toast.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+      customClass: {
+        popup: "swal2-toast-custom",
+        title: "swal2-toast-title",
+        icon: "swal2-toast-icon",
+      },
     });
 
-    setTimeout(async () => {
-      try {
-        const currentMonth = document.getElementById("analysisMonth").value;
-        const response = await fetch(`/api/analysis/${currentMonth}`);
-        if (!response.ok) throw new Error("Error al obtener datos");
-        const data = await response.json();
-
-        if (dataTable) {
-          dataTable.clear();
-          dataTable.rows.add(data.analysis);
-          dataTable.draw();
-        }
-
-        const tooltips = document.querySelectorAll(
-          '[data-bs-toggle="tooltip"]'
-        );
-        tooltips.forEach((tooltip) => {
-          const bsTooltip = bootstrap.Tooltip.getInstance(tooltip);
-          if (bsTooltip) {
-            bsTooltip.dispose();
-          }
-          new bootstrap.Tooltip(tooltip);
-        });
-      } catch (error) {
-        console.error("Error al recargar la tabla:", error);
-      }
-    }, 500);
+    await Toast.fire({
+      icon: "success",
+      title: "Cambios guardados correctamente",
+    });
   } catch (error) {
     console.error("Error:", error);
     Swal.fire({
@@ -962,6 +1014,74 @@ async function actualizarGestionMedicamento(codigo, datos) {
       text: error.message || "Error al actualizar el medicamento",
       confirmButtonColor: "#00549F",
     });
+  }
+}
+
+async function actualizarGestionMedicamento(codigo, datos) {
+  try {
+    // Mostrar loader mientras se procesa
+    Swal.fire({
+      title: "Actualizando...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    const response = await fetch(`/api/analysis/update/${codigo}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(datos),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (result.isAlreadyManaged) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Medicamento en gestión",
+          text: `Este medicamento está siendo gestionado por ${result.managedBy}`,
+          confirmButtonColor: "#00549F",
+        });
+        return;
+      }
+      throw new Error(result.error || "Error al actualizar");
+    }
+
+    // Forzar recarga de datos con el estado actualizado
+    const currentMonth = document.getElementById("analysisMonth").value;
+    const freshData = await fetch(`/api/analysis/${currentMonth}`);
+    const tableData = await freshData.json();
+
+    console.log("Datos frescos recibidos:", tableData);
+
+    if (dataTable) {
+      console.log("Estado antes de actualizar:", dataTable.rows().data());
+      
+      // Destruir y recrear completamente
+      dataTable.destroy();
+      $('#analysisTable tbody').empty();
+      
+      dataTable = $('#analysisTable').DataTable({
+        data: tableData.analysis,
+        columns: [/* tu configuración de columnas */],
+        language: dataTableEsES,
+      });
+
+      console.log("Estado después de actualizar:", dataTable.rows().data());
+
+      // Reactivar el filtro actual si existe
+      const activeFilter = $('.filter-buttons .btn.active').attr('class')?.match(/filter-\w+/)?.[0];
+      if (activeFilter) {
+        console.log("Reactivando filtro:", activeFilter);
+        $(`.${activeFilter}`).trigger('click');
+      }
+    }
+  } catch (error) {
+    console.error("Error en actualización:", error);
   }
 }
 
@@ -1026,4 +1146,17 @@ function updateStatsPanel(stats) {
 
   const oldStats = $(".card.border-0.bg-light").closest(".row");
   oldStats.replaceWith(statsHtml);
+}
+
+function verifyMedicineState(codigo) {
+  return fetch(`/api/analysis/detail/${codigo}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("Estado actual del medicamento:", {
+        codigo,
+        estado: data.estado_gestion,
+        ultimaGestion: data.ultima_gestion
+      });
+      return data;
+    });
 }

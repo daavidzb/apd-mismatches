@@ -42,15 +42,17 @@ const get_analysis = async (req, res) => {
         mg.id_usuario,
         mg.fecha_gestion,
         u.nombre as gestionado_por,
-        ed.nombre as estado_gestion,
-        ROW_NUMBER() OVER (PARTITION BY d.codigo_med ORDER BY mg.fecha_gestion DESC) as rn
-      FROM descuadres d
-      LEFT JOIN medicamentos_gestionados mg ON d.id_descuadre = mg.id_descuadre
+        ed.nombre as estado_gestion
+      FROM (
+        SELECT codigo_med, MAX(id_gestion) as last_gestion
+        FROM medicamentos_gestionados mg
+        JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
+        GROUP BY codigo_med
+      ) last_mg
+      JOIN medicamentos_gestionados mg ON mg.id_gestion = last_mg.last_gestion
+      JOIN descuadres d ON mg.id_descuadre = d.id_descuadre
       LEFT JOIN usuarios u ON mg.id_usuario = u.id_usuario
       LEFT JOIN estados_descuadre ed ON mg.id_estado = ed.id_estado
-      WHERE d.id_descuadre IN (
-        SELECT MAX(id_descuadre) FROM descuadres GROUP BY codigo_med
-      )
     )
     SELECT 
       ld.codigo_med,
@@ -72,7 +74,7 @@ const get_analysis = async (req, res) => {
       COALESCE(ug.fecha_gestion, NULL) as fecha_gestion
     FROM LastDescuadres ld
     JOIN PatronDescuadres pd ON ld.codigo_med = pd.codigo_med
-    LEFT JOIN UltimaGestion ug ON ld.codigo_med = ug.codigo_med AND ug.rn = 1
+    LEFT JOIN UltimaGestion ug ON ld.codigo_med = ug.codigo_med
     WHERE ld.rn = 1
     ORDER BY ld.fecha_ultimo_reporte DESC, ld.descripcion`;
 
@@ -95,32 +97,27 @@ const get_analysis = async (req, res) => {
 const get_analysis_all = async (req, res) => {
   try {
     const query = `
-          SELECT DISTINCT d.codigo_med, d.descripcion, 
-                 d.descuadre as ultimo_descuadre,
-                 r.fecha_reporte as fecha_ultimo_descuadre,
-                 COALESCE(e.nombre, 'Pendiente') as estado_gestion,
-                 (SELECT COUNT(*) > 1 AND 
-                  ABS(STDDEV(d2.descuadre)) > 2
-                  FROM descuadres d2 
-                  WHERE d2.codigo_med = d.codigo_med) as tiene_cambios_tendencia
-          FROM descuadres d
-          LEFT JOIN reportes r ON d.id_reporte = r.id_reporte
-          LEFT JOIN (
-              SELECT mg.id_descuadre, e.nombre, mg.id_gestion
-              FROM medicamentos_gestionados mg
-              JOIN estados_descuadre e ON mg.id_estado = e.id_estado
-              WHERE mg.id_gestion IN (
-                  SELECT MAX(id_gestion)
-                  FROM medicamentos_gestionados
-                  GROUP BY id_descuadre
-              )
-          ) gestion ON d.id_descuadre = gestion.id_descuadre
-          LEFT JOIN estados_descuadre e ON gestion.nombre = e.nombre
-          WHERE r.fecha_reporte = (
-              SELECT MAX(fecha_reporte)
-              FROM reportes
-              WHERE DATE_FORMAT(fecha_reporte, '%Y-%m') = ?
-          )`;
+  SELECT d.*, r.fecha_reporte, m.descripcion,
+         COALESCE(mg.estado, 'Pendiente') as estado_gestion
+  FROM descuadres d
+  LEFT JOIN reportes r ON d.id_reporte = r.id_reporte
+  LEFT JOIN medicamentos m ON d.codigo_med = m.codigo_med
+  LEFT JOIN (
+      SELECT d2.codigo_med, e.nombre as estado
+      FROM medicamentos_gestionados mg
+      JOIN descuadres d2 ON mg.id_descuadre = d2.id_descuadre
+      JOIN estados_descuadre e ON mg.id_estado = e.id_estado
+      WHERE mg.id_gestion IN (
+          SELECT MAX(mg2.id_gestion)
+          FROM medicamentos_gestionados mg2
+          JOIN descuadres d3 ON mg2.id_descuadre = d3.id_descuadre
+          GROUP BY d3.codigo_med
+      )
+  ) mg ON d.codigo_med = mg.codigo_med
+  WHERE r.fecha_reporte = (
+      SELECT MAX(fecha_reporte)
+      FROM reportes
+  )`;
 
     const [results] = await connection.query(query, [req.params.month]);
     res.json({ analysis: results });
