@@ -3570,3 +3570,21 @@ body {
     width: 100%;
   }
 }
+
+/* Matrix table improvements */
+.matrix-table td .bi-dash-circle {
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
+.matrix-table td:hover .bi-dash-circle {
+  opacity: 1;
+}
+
+.matrix-table tr {
+  transition: all 0.2s ease;
+}
+
+.matrix-table tr:hover {
+  background-color: rgba(0, 84, 159, 0.02);
+}

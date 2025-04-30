@@ -165,6 +165,18 @@ document.addEventListener("DOMContentLoaded", async function() {
       matrixData.flatMap(m => m.historial.map(h => h.fecha))
     )].sort((a, b) => new Date(b) - new Date(a));
 
+    // Verificar si el medicamento tiene descuadres recientes
+    const hasRecentMismatches = medicine.historial.some((h, index) => {
+      // Considerar solo los últimos 5 registros por ejemplo
+      if (index < 5) {
+        return h.descuadre !== 0;
+      }
+      return false;
+    });
+
+    // Si no tiene descuadres recientes, no mostrar la fila
+    if (!hasRecentMismatches) return '';
+
     // Detectar patrones
     const historyValues = medicine.historial.map(h => h.descuadre);
     const isConstant = historyValues.every(v => v === historyValues[0]);
@@ -199,7 +211,12 @@ document.addEventListener("DOMContentLoaded", async function() {
         </td>
         ${dates.map(date => {
           const dayData = medicine.historial.find(h => h.fecha === date);
-          if (!dayData) return '<td></td>';
+          if (!dayData || dayData.descuadre === 0) {
+            return `
+              <td class="text-center text-muted">
+                <i class="bi bi-dash-circle" data-bs-toggle="tooltip" title="Sin descuadre"></i>
+              </td>`;
+          }
           
           const tooltipContent = `
             <div class='text-start'>
@@ -228,9 +245,7 @@ document.addEventListener("DOMContentLoaded", async function() {
               <span class="${dayData.descuadre < 0 ? 'text-danger' : 'text-success'}">
                 <strong>${dayData.descuadre}</strong>
               </span>
-              ${dayData.hasChange ? `
-                <div class="change-indicator"></div>
-              ` : ''}
+              ${dayData.hasChange ? `<div class="change-indicator"></div>` : ''}
             </td>
           `;
         }).join('')}
