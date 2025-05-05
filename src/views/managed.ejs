@@ -114,8 +114,8 @@
       }
 
       .nav-tabs .nav-link.active {
-        color: #00549F;
-        border-bottom: 2px solid #00549F;
+        color: #00549f;
+        border-bottom: 2px solid #00549f;
         font-weight: 500;
       }
 
@@ -132,14 +132,14 @@
       }
 
       .nav-tabs .nav-link.active .badge {
-        background-color: #00549F;
+        background-color: #00549f;
         color: white;
       }
 
       .table-responsive {
         border-radius: 0.5rem;
         background: white;
-        box-shadow: 0 0 0.5rem rgba(0,0,0,0.05);
+        box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.05);
       }
 
       .table {
@@ -170,6 +170,19 @@
         color: #495057;
         margin-bottom: 0.5rem;
       }
+      .badge {
+        padding: 0.5em 0.8em;
+        font-weight: 500;
+        transition: all 0.2s ease;
+      }
+
+      .nav-tabs .nav-link .badge {
+        opacity: 0.8;
+      }
+
+      .nav-tabs .nav-link.active .badge {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -186,47 +199,72 @@
               </h5>
             </div>
           </div>
-          
+
           <div class="card-body">
             <div class="filters-section">
               <div class="row g-3">
                 <div class="col-md-4">
-                  <label class="filter-label" for="categoriaFilter">Filtrar por categoría</label>
+                  <label class="filter-label" for="categoriaFilter"
+                    >Filtrar por categoría</label
+                  >
                   <select class="form-select" id="categoriaFilter">
                     <option value="">Todas las categorías</option>
                   </select>
                 </div>
                 <div class="col-md-4">
-                  <label class="filter-label" for="searchFilter">Buscar medicamento</label>
-                  <input type="text" class="form-control" id="searchFilter" placeholder="Código o descripción...">
+                  <label class="filter-label" for="searchFilter"
+                    >Buscar medicamento</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="searchFilter"
+                    placeholder="Código o descripción..."
+                  />
                 </div>
               </div>
             </div>
 
             <ul class="nav nav-tabs" role="tablist">
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pendientes-tab">
+                <button
+                  class="nav-link active"
+                  data-bs-toggle="tab"
+                  data-bs-target="#pendientes-tab"
+                >
                   <i class="bi bi-clock me-1"></i>
                   Pendientes
                   <span class="badge ms-2" id="count-tablaPendientes">0</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#regularizar-tab">
+                <button
+                  class="nav-link"
+                  data-bs-toggle="tab"
+                  data-bs-target="#regularizar-tab"
+                >
                   <i class="bi bi-arrow-repeat me-1"></i>
                   Por Regularizar
                   <span class="badge ms-2" id="count-tablaRegularizar">0</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#proceso-tab">
+                <button
+                  class="nav-link"
+                  data-bs-toggle="tab"
+                  data-bs-target="#proceso-tab"
+                >
                   <i class="bi bi-gear me-1"></i>
                   En Proceso
                   <span class="badge ms-2" id="count-tablaEnProceso">0</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resueltos-tab">
+                <button
+                  class="nav-link"
+                  data-bs-toggle="tab"
+                  data-bs-target="#resueltos-tab"
+                >
                   <i class="bi bi-check-circle me-1"></i>
                   Resueltos
                   <span class="badge ms-2" id="count-tablaResueltos">0</span>

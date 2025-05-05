@@ -20,6 +20,22 @@ const dataTableEsES = {
   },
 };
 
+// Función para obtener el color del badge según el estado
+function getBadgeColor(estado) {
+  switch (estado?.toLowerCase()) {
+    case "resuelto":
+    case "corregido":
+      return "#198754"; // Verde
+    case "en proceso":
+      return "#ffc107"; // Amarillo
+    case "regularizar":
+      return "#00b8d4"; // Turquesa
+    case "pendiente":
+    default:
+      return "#6c757d"; // Gris
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   // Configuración base para todas las tablas
   const configBase = {
@@ -48,26 +64,25 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         autoFilter: true,
         exportOptions: {
-          columns: [0, 1, 2, 3, 4],
+          columns: [0, 1, 2, 3, 4], // Mantener las mismas columnas
           format: {
             body: function (data, row, column) {
-              // Remover HTML tags
-              if (typeof data === "string") {
-                // Para descripción, usar el texto completo sin truncar
+              if (typeof data === 'string') {
+                // Para descripción
                 if (column === 1) {
                   const el = $(data);
-                  return el.attr("title") || el.text();
+                  return el.attr('title') || el.text();
                 }
-                // Para estado, solo el texto
-                if (column === 3) {
+                // Para estado y usuario
+                if (column === 2 || column === 3) {
                   return $(data).text();
                 }
-                // Para el resto, limpiar HTML
-                return data.replace(/<[^>]+>/g, "");
+                // Para el resto
+                return data.replace(/<[^>]+>/g, '');
               }
               return data;
-            },
-          },
+            }
+          }
         },
         customize: function (xlsx) {
           const sheet = xlsx.xl.worksheets["sheet1.xml"];
@@ -92,36 +107,42 @@ document.addEventListener("DOMContentLoaded", function () {
       {
         data: "codigo_med",
         title: "Código",
-        width: "10%",
+        width: "10%"
       },
       {
         data: "descripcion",
         title: "Descripción",
         width: "30%",
-        render: function (data) {
-          const shortDesc =
-            data.length > 30 ? data.substring(0, 30) + "..." : data;
+        render: function(data) {
+          const shortDesc = data.length > 30 ? data.substring(0, 30) + "..." : data;
           return `<span title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
-        },
+        }
       },
       {
-        data: "descuadre",
-        title: "Descuadre",
+        data: null,
+        title: "Gestionado por",
         width: "15%",
-        className: "text-end",
-        render: function (data) {
-          return `<span class="${data < 0 ? "text-danger" : "text-success"}">${data}</span>`;
-        },
+        render: function(data, type, row) {
+          // Usar los datos de gestión que vienen de la API
+          if (row.estado_gestion && row.estado_gestion !== 'Pendiente') {
+            return `<span data-bs-toggle="tooltip" title="Última gestión: ${
+              row.fecha_gestion ? new Date(row.fecha_gestion).toLocaleString("es-ES") : 'N/A'
+            }">${row.usuario || 'Usuario no especificado'}</span>`;
+          }
+          return "Sin gestionar";
+        }
       },
       {
-        data: "estado",
+        data: null,
         title: "Estado",
         width: "20%",
-        render: function (data, type, row) {
-          return `<span class="badge" style="background-color: ${row.estado_color || '#6c757d'}">
-            ${row.estado || 'Pendiente'}
+        render: function(data, type, row) {
+          const estado = row.estado_gestion || 'Pendiente';
+          const color = getBadgeColor(estado);
+          return `<span class="badge" style="background-color: ${color}">
+            ${estado}
           </span>`;
-        },
+        }
       },
       {
         data: "fecha_gestion",
@@ -129,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function () {
         width: "15%",
         render: function (data) {
           return data ? new Date(data).toLocaleString("es-ES") : "N/A";
-        },
+        }
       },
       {
         data: null,
@@ -150,8 +171,8 @@ document.addEventListener("DOMContentLoaded", function () {
               <i class="bi bi-pencil-square"></i>
             </button>
           </div>`;
-        },
-      },
+        }
+      }
     ],
     drawCallback: function () {
       const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -159,7 +180,6 @@ document.addEventListener("DOMContentLoaded", function () {
     },
   };
 
-  // Configuración específica para cada tabla
   const tabsConfig = [
     { id: "tablaPendientes", status: 1, title: "Pendientes" },
     { id: "tablaRegularizar", status: 4, title: "Por Regularizar" },
@@ -167,9 +187,9 @@ document.addEventListener("DOMContentLoaded", function () {
     { id: "tablaResueltos", status: 3, title: "Resueltos" },
   ];
 
-  // Actualizar el HTML de los tabs primero
-  const tabsContainer = document.createElement("div");
-  tabsContainer.innerHTML = `
+  // Limpiar el contenido existente antes de agregar el nuevo
+  const cardBody = document.querySelector(".card-body");
+  cardBody.innerHTML = `
     <div class="filters-section mb-4">
       <div class="row g-3">
         <div class="col-md-4">
@@ -184,27 +204,32 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
 
     <ul class="nav nav-tabs mb-3" role="tablist">
-      ${tabsConfig
-        .map(
-          (tab, i) => `
-        <li class="nav-item" role="presentation">
-          <button class="nav-link ${i === 0 ? "active" : ""}" 
-                  data-bs-toggle="tab" 
-                  data-bs-target="#${tab.id}-tab" 
-                  type="button">
-            ${tab.title}
-            <span class="badge bg-secondary ms-2" id="count-${tab.id}">0</span>
-          </button>
-        </li>
-      `
-        )
-        .join("")}
+      ${tabsConfig.map((tab, i) => {
+        const estado = {
+          1: 'Pendiente',
+          2: 'En Proceso',
+          3: 'Resuelto',
+          4: 'Regularizar'
+        }[tab.status];
+        const color = getBadgeColor(estado);
+        
+        return `
+          <li class="nav-item" role="presentation">
+            <button class="nav-link ${i === 0 ? "active" : ""}" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#${tab.id}-tab" 
+                    type="button">
+              ${tab.title}
+              <span class="badge ms-2" id="count-${tab.id}" 
+                    style="background-color: ${color}">0</span>
+            </button>
+          </li>
+        `;
+      }).join("")}
     </ul>
 
     <div class="tab-content">
-      ${tabsConfig
-        .map(
-          (tab, i) => `
+      ${tabsConfig.map((tab, i) => `
         <div class="tab-pane fade ${i === 0 ? "show active" : ""}" 
              id="${tab.id}-tab">
           <div class="table-responsive">
@@ -214,13 +239,9 @@ document.addEventListener("DOMContentLoaded", function () {
             </table>
           </div>
         </div>
-      `
-        )
-        .join("")}
+      `).join("")}
     </div>
   `;
-
-  document.querySelector(".card-body").appendChild(tabsContainer);
 
   // Inicializar las tablas después de crear el HTML
   const tables = {};
