@@ -2198,9 +2198,9 @@ body {
 }
 
 /* Tooltip styles */
-[data-bs-toggle="tooltip"] {
+/* [data-bs-toggle="tooltip"] {
   cursor: help;
-}
+} */
 
 /* Modal styles */
 .swal2-container {
@@ -2231,9 +2231,9 @@ body {
 }
 
 /* Tooltip styles */
-[data-bs-toggle="tooltip"] {
+/* [data-bs-toggle="tooltip"] {
   cursor: help;
-}
+} */
 
 .tooltip {
   --bs-tooltip-bg: #2c3e50;
@@ -2308,10 +2308,10 @@ body {
   pointer-events: none;
 }
 
-[data-bs-toggle="tooltip"] {
+/* [data-bs-toggle="tooltip"] {
   cursor: help;
   white-space: nowrap;
-}
+} */
 
 /* Ajuste para el contenedor de diferencia */
 .difference-container {
@@ -2856,9 +2856,9 @@ body {
 }
 
 /* Optimización de tooltips globales */
-[data-bs-toggle="tooltip"] {
+/* [data-bs-toggle="tooltip"] {
   cursor: help;
-}
+} */
 
 .tooltip {
   --bs-tooltip-bg: #2c3e50;

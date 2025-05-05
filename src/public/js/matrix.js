@@ -51,6 +51,36 @@ document.addEventListener("DOMContentLoaded", async function() {
   }
 
   function renderTablePage() {
+    // Ordenar los datos por relevancia
+    filteredData.sort((a, b) => {
+      // Obtener último descuadre no nulo de cada medicamento
+      const getLastMismatch = (medicine) => {
+        return medicine.historial
+          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          .find(h => h.descuadre !== 0);
+      };
+
+      const lastA = getLastMismatch(a);
+      const lastB = getLastMismatch(b);
+
+      if (!lastA) return 1;  // Sin descuadre al final
+      if (!lastB) return -1; // Sin descuadre al final
+
+      // Priorizar por:
+      // 1. Descuadres con cambios recientes
+      // 2. Fecha del último descuadre
+      // 3. Magnitud del descuadre
+      if (a.historial.some(h => h.hasChange) && !b.historial.some(h => h.hasChange)) return -1;
+      if (!a.historial.some(h => h.hasChange) && b.historial.some(h => h.hasChange)) return 1;
+
+      const dateA = new Date(lastA.fecha);
+      const dateB = new Date(lastB.fecha);
+      if (dateA > dateB) return -1;
+      if (dateA < dateB) return 1;
+
+      return Math.abs(lastB.descuadre) - Math.abs(lastA.descuadre);
+    });
+
     const start = currentPage * TABLE_PAGE_SIZE;
     const end = start + TABLE_PAGE_SIZE;
     const pageData = filteredData.slice(start, end);
@@ -107,44 +137,22 @@ document.addEventListener("DOMContentLoaded", async function() {
   }
 
   function renderTableHeader() {
-    if (!matrixData.length) {
-      table.querySelector('tbody').innerHTML = `
-        <tr>
-          <td colspan="100" class="text-center">
-            No hay datos disponibles
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    // Crear thead si no existe
-    let thead = table.querySelector("thead");
-    if (!thead) {
-      thead = document.createElement("thead");
-      table.appendChild(thead);
-    }
-
-    // Crear tr si no existe
-    let theadRow = thead.querySelector("tr");
-    if (!theadRow) {
-      theadRow = document.createElement("tr");
-      thead.appendChild(theadRow);
-    }
-
-    // Crear tbody si no existe
-    let tbody = table.querySelector("tbody");
-    if (!tbody) {
-      tbody = document.createElement("tbody");
-      table.appendChild(tbody);
-    }
+    const thead = table.querySelector("thead") || document.createElement("thead");
+    const tbody = table.querySelector("tbody") || document.createElement("tbody");
     
-    // Obtener fechas únicas
+    // Limpiar tabla si estamos en la primera página
+    if (currentPage === 0) {
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+    }
+
+    // Obtener fechas únicas y ordenarlas de más reciente a más antigua
     const dates = [...new Set(
       matrixData.flatMap(m => m.historial.map(h => h.fecha))
     )].sort((a, b) => new Date(b) - new Date(a));
 
     // Renderizar encabezados
+    const theadRow = document.createElement("tr");
     theadRow.innerHTML = `
       <th style="min-width: 300px; position: sticky; left: 0; background: white; z-index: 2">
         <div class="d-flex align-items-center">
@@ -158,6 +166,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         </th>
       `).join('')}
     `;
+    thead.appendChild(theadRow);
+    table.appendChild(thead);
+    table.appendChild(tbody);
   }
 
   function createRowHTML(medicine) {
@@ -165,92 +176,92 @@ document.addEventListener("DOMContentLoaded", async function() {
       matrixData.flatMap(m => m.historial.map(h => h.fecha))
     )].sort((a, b) => new Date(b) - new Date(a));
 
-    // Verificar si el medicamento tiene descuadres recientes
-    const hasRecentMismatches = medicine.historial.some((h, index) => {
-      // Considerar solo los últimos 5 registros por ejemplo
-      if (index < 5) {
-        return h.descuadre !== 0;
+    // Obtener el último descuadre no nulo
+    const lastNonZeroMismatch = medicine.historial
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .find(h => h.descuadre !== 0);
+
+    if (!lastNonZeroMismatch) return '';
+
+    // Generar las celdas para cada fecha
+    const dateCells = dates.map(date => {
+      const dayData = medicine.historial.find(h => h.fecha === date);
+      if (!dayData || dayData.descuadre === 0) {
+        return '<td class="text-center text-muted">-</td>';
       }
-      return false;
-    });
 
-    // Si no tiene descuadres recientes, no mostrar la fila
-    if (!hasRecentMismatches) return '';
+      const cellClass = dayData.hasChange ? 'table-warning' : '';
+      const valueClass = dayData.descuadre > 0 ? 'text-success' : 'text-danger';
+      
+      // Crear tooltip con información detallada
+      const tooltipContent = `
+        <div class='text-start'>
+          <div class='mb-1'><strong>Fecha:</strong> ${new Date(date).toLocaleDateString()}</div>
+          <div class='mb-1'><strong>FarmaTools:</strong> ${dayData.cantidad_farmatools}</div>
+          <div class='mb-1'><strong>APD:</strong> ${dayData.cantidad_armario_apd}</div>
+          <div><strong>Diferencia:</strong> <span class='${valueClass}'>${dayData.descuadre}</span></div>
+        </div>
+      `;
 
-    // Detectar patrones
-    const historyValues = medicine.historial.map(h => h.descuadre);
-    const isConstant = historyValues.every(v => v === historyValues[0]);
-    const hasIncreasingTrend = historyValues.every((v, i) => i === 0 || v >= historyValues[i - 1]);
-    const hasDecreasingTrend = historyValues.every((v, i) => i === 0 || v <= historyValues[i - 1]);
-
-    let patternBadge = '';
-    if (isConstant) {
-      patternBadge = `<span class="badge bg-info ms-2" data-bs-toggle="tooltip" title="Descuadre constante">
-        <i class="bi bi-arrow-repeat"></i>
-      </span>`;
-    } else if (hasIncreasingTrend) {
-      patternBadge = `<span class="badge bg-danger ms-2" data-bs-toggle="tooltip" title="Tendencia creciente">
-        <i class="bi bi-graph-up"></i>
-      </span>`;
-    } else if (hasDecreasingTrend) {
-      patternBadge = `<span class="badge bg-success ms-2" data-bs-toggle="tooltip" title="Tendencia decreciente">
-        <i class="bi bi-graph-down"></i>
-      </span>`;
-    }
+      return `
+        <td class="text-center ${cellClass}" 
+            data-bs-toggle="tooltip" 
+            data-bs-html="true"
+            data-bs-custom-class="custom-tooltip"
+            title="${tooltipContent.replace(/"/g, '&quot;')}">
+          <span class="${valueClass}">
+            <strong>${dayData.descuadre}</strong>
+            ${dayData.hasChange ? 
+              `<i class="bi bi-exclamation-triangle-fill text-warning ms-1" style="font-size: 0.75rem;"></i>` 
+              : ''}
+          </span>
+        </td>`;
+    }).join('');
 
     return `
       <tr>
         <td style="position: sticky; left: 0; background: white; z-index: 1">
           <div class="d-flex align-items-center">
             <div>
-              <strong>${medicine.codigo_med}</strong>
-              <small class="text-muted d-block">${medicine.descripcion}</small>
+              <strong class="text-primary">${medicine.codigo_med}</strong>
+              <small class="text-muted d-block text-truncate" style="max-width: 250px;" 
+                     title="${medicine.descripcion}">
+                ${medicine.descripcion}
+              </small>
             </div>
-            ${patternBadge}
+            ${getPatternBadge(medicine)}
           </div>
         </td>
-        ${dates.map(date => {
-          const dayData = medicine.historial.find(h => h.fecha === date);
-          if (!dayData || dayData.descuadre === 0) {
-            return `
-              <td class="text-center text-muted">
-                <i class="bi bi-dash-circle" data-bs-toggle="tooltip" title="Sin descuadre"></i>
-              </td>`;
-          }
-          
-          const tooltipContent = `
-            <div class='text-start'>
-              <div class='mb-1'><b>${new Date(date).toLocaleDateString()}</b></div>
-              <div class='d-flex justify-content-between gap-3'>
-                <span>FarmaTools:</span>
-                <span>${dayData.farmatools}</span>
-              </div>
-              <div class='d-flex justify-content-between gap-3'>
-                <span>APD:</span>
-                <span>${dayData.apd}</span>
-              </div>
-              <div class='d-flex justify-content-between gap-3 fw-bold'>
-                <span>Diferencia:</span>
-                <span class='${dayData.descuadre < 0 ? 'text-danger' : 'text-success'}'>${dayData.descuadre}</span>
-              </div>
-            </div>
-          `;
-          
-          return `
-            <td class="text-center position-relative ${dayData.hasChange ? 'has-change' : ''}"
-                data-bs-toggle="tooltip"
-                data-bs-custom-class="matrix-tooltip"
-                data-bs-html="true"
-                title="${tooltipContent}">
-              <span class="${dayData.descuadre < 0 ? 'text-danger' : 'text-success'}">
-                <strong>${dayData.descuadre}</strong>
-              </span>
-              ${dayData.hasChange ? `<div class="change-indicator"></div>` : ''}
-            </td>
-          `;
-        }).join('')}
-      </tr>
-    `;
+        ${dateCells}
+      </tr>`;
+  }
+
+  // Función auxiliar para obtener el badge de patrón
+  function getPatternBadge(medicine) {
+    const historyValues = medicine.historial
+      .filter(h => h.descuadre !== 0)
+      .map(h => h.descuadre);
+
+    const isConstant = historyValues.length > 1 && 
+      historyValues.every(v => v === historyValues[0]);
+    const hasIncreasingTrend = historyValues.length > 1 && 
+      historyValues.every((v, i) => i === 0 || v >= historyValues[i - 1]);
+
+    if (isConstant) {
+      return `
+        <span class="badge bg-info-subtle text-info ms-2" data-bs-toggle="tooltip" 
+              title="Descuadre constante - Considerar regularizar">
+          <i class="bi bi-arrow-repeat"></i>
+        </span>`;
+    } 
+    if (hasIncreasingTrend) {
+      return `
+        <span class="badge bg-danger-subtle text-danger ms-2" data-bs-toggle="tooltip" 
+              title="Tendencia creciente - Requiere atención">
+          <i class="bi bi-graph-up"></i>
+        </span>`;
+    }
+    return '';
   }
 
   function initializeTooltips() {
@@ -281,11 +292,35 @@ document.addEventListener("DOMContentLoaded", async function() {
   });
 
   viewTypeSelect.addEventListener('change', () => {
-    // Lógica para cambiar el tipo de vista
+    const viewType = viewTypeSelect.value;
+    const timeRange = parseInt(timeRangeSelect.value);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - timeRange);
+
+    filteredData = matrixData.filter(medicine => {
+      const hasMismatch = medicine.historial.some(h => h.descuadre !== 0);
+      if (!hasMismatch) return false;
+
+      const recentMismatches = medicine.historial.filter(h => 
+        new Date(h.fecha) >= cutoffDate && h.descuadre !== 0
+      );
+
+      switch(viewType) {
+        case 'changes':
+          return recentMismatches.some(h => h.hasChange);
+        case 'active':
+          return recentMismatches.length > 0;
+        default:
+          return true;
+      }
+    });
+
+    currentPage = 0;
+    renderTablePage();
   });
 
   timeRangeSelect.addEventListener('change', () => {
-    // Lógica para cambiar el rango de tiempo
+    viewTypeSelect.dispatchEvent(new Event('change'));
   });
 
   // Cargar datos iniciales
