@@ -29,120 +29,249 @@ document.addEventListener("DOMContentLoaded", function () {
     responsive: true,
     scrollX: false,
     autoWidth: false,
-    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+    dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
+    buttons: [
+      {
+        extend: "excel",
+        className: "btn btn-success",
+        text: '<i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel',
+        filename: function () {
+          const tableId = $(this.element).closest("table").attr("id");
+          const estado = {
+            tablaPendientes: "Medicamentos Pendientes",
+            tablaRegularizar: "Medicamentos Por Regularizar",
+            tablaEnProceso: "Medicamentos En Proceso",
+            tablaResueltos: "Medicamentos Resueltos",
+          }[tableId] || "Medicamentos";
+
+          return `${estado} - ${new Date().toLocaleDateString()}`;
+        },
+        autoFilter: true,
+        exportOptions: {
+          columns: [0, 1, 2, 3, 4],
+          format: {
+            body: function (data, row, column) {
+              // Remover HTML tags
+              if (typeof data === "string") {
+                // Para descripción, usar el texto completo sin truncar
+                if (column === 1) {
+                  const el = $(data);
+                  return el.attr("title") || el.text();
+                }
+                // Para estado, solo el texto
+                if (column === 3) {
+                  return $(data).text();
+                }
+                // Para el resto, limpiar HTML
+                return data.replace(/<[^>]+>/g, "");
+              }
+              return data;
+            },
+          },
+        },
+        customize: function (xlsx) {
+          const sheet = xlsx.xl.worksheets["sheet1.xml"];
+
+          // Estilos para la cabecera
+          $("row:first c", sheet).attr("s", "2");
+
+          // Estilos para las columnas
+          $("row:not(:first) c[r^='A']", sheet).attr("s", "55"); // Código
+          $("row:not(:first) c[r^='C']", sheet).attr("s", "62"); // Descuadre
+
+          // Anchos de columna
+          const colWidths = [15, 50, 15, 20, 25];
+          const cols = sheet.getElementsByTagName("col");
+          colWidths.forEach((width, i) => {
+            if (cols[i]) cols[i].setAttribute("width", width);
+          });
+        },
+      },
+    ],
+    columns: [
+      {
+        data: "codigo_med",
+        title: "Código",
+        width: "10%",
+      },
+      {
+        data: "descripcion",
+        title: "Descripción",
+        width: "30%",
+        render: function (data) {
+          const shortDesc =
+            data.length > 30 ? data.substring(0, 30) + "..." : data;
+          return `<span title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
+        },
+      },
+      {
+        data: "descuadre",
+        title: "Descuadre",
+        width: "15%",
+        className: "text-end",
+        render: function (data) {
+          return `<span class="${data < 0 ? "text-danger" : "text-success"}">${data}</span>`;
+        },
+      },
+      {
+        data: "estado",
+        title: "Estado",
+        width: "20%",
+        render: function (data, type, row) {
+          return `<span class="badge" style="background-color: ${row.estado_color || '#6c757d'}">
+            ${row.estado || 'Pendiente'}
+          </span>`;
+        },
+      },
+      {
+        data: "fecha_gestion",
+        title: "Última gestión",
+        width: "15%",
+        render: function (data) {
+          return data ? new Date(data).toLocaleString("es-ES") : "N/A";
+        },
+      },
+      {
+        data: null,
+        title: "Acciones",
+        width: "10%",
+        orderable: false,
+        render: function (data) {
+          return `<div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary ver-detalle" 
+                    data-codigo="${data.codigo_med}" 
+                    title="Ver detalles">
+              <i class="bi bi-info-circle"></i>
+            </button>
+            <button class="btn btn-outline-success gestionar" 
+                    data-codigo="${data.codigo_med}" 
+                    data-descripcion="${data.descripcion}" 
+                    title="Gestionar">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+          </div>`;
+        },
+      },
+    ],
     drawCallback: function () {
-      // Reinicializar tooltips después de cada redibujado
       const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-      tooltips.forEach((tooltip) => {
-        new bootstrap.Tooltip(tooltip);
-      });
+      tooltips.forEach((tooltip) => new bootstrap.Tooltip(tooltip));
     },
   };
 
-  // Columnas base para todas las tablas
-  const columnasBase = [
-    {
-      data: "codigo_med",
-      title: "Código",
-      width: "10%",
-    },
-    {
-      data: "descripcion",
-      title: "Descripción",
-      width: "35%",
-      render: function (data) {
-        // Solo acortar la descripción en la tabla
-        const shortDesc =
-          data.length > 30 ? data.substring(0, 30) + "..." : data;
-        return `<span title="${data}" data-bs-toggle="tooltip">${shortDesc}</span>`;
-      },
-    },
-    {
-      data: "categoria",
-      title: "Categoría",
-      width: "20%",
-    },
-    {
-      data: "fecha_gestion",
-      title: "Última gestión",
-      width: "20%",
-      render: function (data) {
-        return data
-          ? new Date(data).toLocaleString("es-ES", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })
-          : "N/A";
-      },
-    },
-    {
-      data: null,
-      title: "Acciones",
-      width: "15%",
-      className: "text-center",
-      render: function (data) {
-        return `
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary btn-sm ver-detalle"
-                                data-codigo="${data.codigo_med}"
-                                title="Ver detalles">
-                            <i class="bi bi-info-circle"></i>
-                        </button>
-                        <button class="btn btn-outline-success btn-sm gestionar"
-                                data-codigo="${data.codigo_med}"
-                                data-descripcion="${data.descripcion}"
-                                title="Gestionar">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                    </div>`;
-      },
-    },
+  // Configuración específica para cada tabla
+  const tabsConfig = [
+    { id: "tablaPendientes", status: 1, title: "Pendientes" },
+    { id: "tablaRegularizar", status: 4, title: "Por Regularizar" },
+    { id: "tablaEnProceso", status: 2, title: "En Proceso" },
+    { id: "tablaResueltos", status: 3, title: "Resueltos" },
   ];
 
-  // Objeto para almacenar las instancias de las tablas
+  // Actualizar el HTML de los tabs primero
+  const tabsContainer = document.createElement("div");
+  tabsContainer.innerHTML = `
+    <div class="filters-section mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <select class="form-select" id="categoriaFilter">
+            <option value="">Filtrar por categoría...</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <input type="text" class="form-control" id="searchFilter" placeholder="Buscar medicamento...">
+        </div>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      ${tabsConfig
+        .map(
+          (tab, i) => `
+        <li class="nav-item" role="presentation">
+          <button class="nav-link ${i === 0 ? "active" : ""}" 
+                  data-bs-toggle="tab" 
+                  data-bs-target="#${tab.id}-tab" 
+                  type="button">
+            ${tab.title}
+            <span class="badge bg-secondary ms-2" id="count-${tab.id}">0</span>
+          </button>
+        </li>
+      `
+        )
+        .join("")}
+    </ul>
+
+    <div class="tab-content">
+      ${tabsConfig
+        .map(
+          (tab, i) => `
+        <div class="tab-pane fade ${i === 0 ? "show active" : ""}" 
+             id="${tab.id}-tab">
+          <div class="table-responsive">
+            <table id="${tab.id}" class="table table-striped">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      `
+        )
+        .join("")}
+    </div>
+  `;
+
+  document.querySelector(".card-body").appendChild(tabsContainer);
+
+  // Inicializar las tablas después de crear el HTML
   const tables = {};
-
-  // Función para inicializar tabla
-  function initTable(tabId, status) {
-    if (tables[tabId]) {
-      tables[tabId].destroy();
-    }
-
-    tables[tabId] = new DataTable(`#${tabId}`, {
+  tabsConfig.forEach((tab) => {
+    tables[tab.id] = $(`#${tab.id}`).DataTable({
       ...configBase,
       ajax: {
-        url: `/api/managed/${status}`,
-        dataSrc: "managed",
+        url: "/api/analysis/all",
+        dataSrc: function (json) {
+          const data = Array.isArray(json) ? json : json.analysis || [];
+
+          // Filtrar por estado
+          return data.filter((item) => {
+            const estadoActual = (item.estado_gestion || "pendiente").toLowerCase();
+
+            switch (tab.status) {
+              case 1: // Pendientes
+                return estadoActual === "pendiente" || !item.estado_gestion;
+              case 2: // En Proceso
+                return estadoActual === "en proceso";
+              case 3: // Resueltos
+                return estadoActual === "resuelto" || estadoActual === "corregido";
+              case 4: // Por Regularizar
+                return estadoActual === "regularizar";
+              default:
+                return false;
+            }
+          });
+        },
       },
-      columns: columnasBase,
     });
 
-    // Event listeners para los botones de cada tabla
-    $(`#${tabId}`).on("click", ".ver-detalle", function () {
+    // Actualizar contador cuando la tabla se dibuja
+    tables[tab.id].on("draw", function () {
+      const count = tables[tab.id].rows().count();
+      $(`#count-${tab.id}`).text(count);
+      console.log(`Tab ${tab.id}: ${count} registros`);
+    });
+
+    // Event handlers para acciones
+    $(`#${tab.id}`).on("click", ".ver-detalle", function () {
       const codigo = $(this).data("codigo");
       showMedicineDetails(codigo);
     });
 
-    $(`#${tabId}`).on("click", ".gestionar", function () {
+    $(`#${tab.id}`).on("click", ".gestionar", function () {
       const codigo = $(this).data("codigo");
       const descripcion = $(this).data("descripcion");
       gestionarDescuadre(codigo, descripcion, tables);
     });
-  }
-
-  // Inicializar todas las tablas
-  const tablesToInit = [
-    { id: "tablaEnProceso", status: 2, title: "En Seguimiento" },
-    { id: "tablaGestionados", status: 3, title: "Resueltos" },
-  ];
-
-  tablesToInit.forEach((table) => {
-    initTable(table.id, table.status);
   });
-
-  // Cargar categorías para el filtro
-  loadCategorias();
 
   // Event listener para filtro de categorías
   const categoriaFilter = document.getElementById("categoriaFilter");
@@ -154,6 +283,14 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
+
+  // Añadir búsqueda global
+  document.getElementById("searchFilter").addEventListener("input", function (e) {
+    const searchTerm = e.target.value;
+    Object.values(tables).forEach((table) => {
+      table.search(searchTerm).draw();
+    });
+  });
 });
 
 // Función para gestionar descuadre
